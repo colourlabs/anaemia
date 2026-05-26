@@ -1,0 +1,21 @@
+{
+  "name": "anaemia-base-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "starter template for Anaemia applications",
+  "scripts": {
+    "dev": "anaemia dev",
+    "build": "anaemia build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anaemia/core": "workspace:*",
+    "solid-js": "^1.9.13"
+  },
+  "devDependencies": {
+    "@anaemia/cli": "workspace:*",
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3"
+  }
+}

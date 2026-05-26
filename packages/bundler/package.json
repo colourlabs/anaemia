@@ -1,0 +1,30 @@
+{
+  "name": "@anaemia/bundler",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@anaemia/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@rspack/cli": "^2.0.4",
+    "@rspack/core": "^2.0.4",
+    "@types/node": "^25.9.1",
+    "babel-loader": "^10.1.1",
+    "babel-preset-solid": "^1.9.12",
+    "sass": "^1.100.0",
+    "sass-loader": "^17.0.0"
+  }
+}

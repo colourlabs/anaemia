@@ -1,0 +1,23 @@
+{
+  "name": "anaemia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "a high-performance SolidJS SSR framework built for large projects",
+  "scripts": {
+    "dev": "pnpm --filter \"@anaemia/cli\" dev",
+    "typecheck": "tsc --noEmit",
+    "clean": "pnpm -r exec rm -rf dist .rspack node_modules"
+  },
+  "keywords": [
+    "ssr",
+    "solidjs"
+  ],
+  "author": "colourlabs",
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.0",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "solid-js": "^1.9.13",
+    "typescript": "^6.0.3"
+  }
+}

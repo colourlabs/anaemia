@@ -1,0 +1,24 @@
+{
+  "name": "@anaemia/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "anaemia": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@anaemia/bundler": "workspace:*",
+    "@anaemia/core": "workspace:*",
+    "@rspack/core": "^2.0.4",
+    "cac": "^7.0.0",
+    "cross-spawn": "^7.0.6",
+    "jiti": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^25.9.1"
+  }
+}

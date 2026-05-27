@@ -1,28 +1,24 @@
-import { createResource } from "solid-js";
-import { runOnServer } from "@anaemia/core";
+import { 
+  useRouteData, 
+  runOnServer, 
+  type InferServerData 
+} from "@anaemia/core";
+import { WelcomeHero } from "@features/welcome/welcome-hero/WelcomeHero.jsx";
 
-import styles from "./index.module.scss";
-import TestComponent from "~/components/TestComponent";
-import { A } from "@solidjs/router";
-
-const getServerStatus = runOnServer(async (clientName: string) => {
+const fetchHomeStats = runOnServer(async () => {
   return {
     status: "online",
-    clientName,
+    clientName: "client",
     timestamp: new Date().toLocaleTimeString(),
   };
 });
 
+export const loader = async () => {
+  return await fetchHomeStats();
+};
+
 export default function Home() {
-  const [serverData] = createResource(() => getServerStatus("client"));
+  const serverData = useRouteData<InferServerData<typeof fetchHomeStats>>();
 
-  return (
-    <div class={styles.wrapper}>
-      <h1>anaemia framework</h1>
-      <pre>{serverData() ? JSON.stringify(serverData(), null, 2) : "loading..."}</pre>
-      <TestComponent />
-
-      <A href="/example-page">wow</A>
-    </div>
-  );
+  return <WelcomeHero data={serverData()} />;
 }

@@ -7,11 +7,22 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./runtime/context": {
       "types": "./dist/runtime/context.d.ts",
+      "import": "./dist/runtime/context.js",
       "default": "./dist/runtime/context.js"
+    },
+    "./runtime/route-data": {
+      "types": "./dist/runtime/route-data.d.ts",
+      "import": "./dist/runtime/route-data.js",
+      "default": "./dist/runtime/route-data.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -21,18 +32,25 @@
   "dependencies": {
     "@hono/node-server": "^2.0.4",
     "@solidjs/router": "^0.16.1",
-    "hono": "^4.12.23"
+    "hono": "^4.12.23",
+    "ws": "^8.21.0"
   },
   "peerDependencies": {
     "@rspack/core": "*",
+    "lightningcss": "^1.32.0",
     "solid-js": "^1.9.13"
   },
   "peerDependenciesMeta": {
     "@rspack/core": {
       "optional": true
+    },
+    "lightningcss": {
+      "optional": true
     }
   },
   "devDependencies": {
-    "@types/node": "^25.9.1"
+    "@types/http-proxy": "^1.17.17",
+    "@types/node": "^25.9.1",
+    "@types/ws": "^8.18.1"
   }
 }

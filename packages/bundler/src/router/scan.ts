@@ -1,13 +1,21 @@
 import { glob } from "glob";
 import path from "path";
+import { createJiti } from "jiti";
+
+const jiti = createJiti(import.meta.url, { interopDefault: true });
 
 export type RouteType = "page" | "layout" | "catch-all";
+
+export interface LayoutManifestEntry {
+  filePath: string;
+  guards: any[];
+}
 
 export interface RouteManifestEntry {
   // the URL pattern this route matches
   // e.g. /blog/:slug, /dashboard, /
   urlPattern: string;
-  
+
   // absolute path to the route file
   filePath: string;
 
@@ -16,7 +24,10 @@ export interface RouteManifestEntry {
 
   // ordered list of layout files that wrap this route
   // e.g. [root layout, dashboard layout]
-  layouts: string[];
+  layouts: LayoutManifestEntry[];
+
+  // holds page level guards
+  guards: any[];
   // what type of file this is
   type: RouteType;
 
@@ -52,13 +63,28 @@ export function scanRoutes(appRoot: string): RouteManifestEntry[] {
   const routesDir = path.resolve(appRoot, "./src/routes");
   const files = glob.sync("**/*.{tsx,jsx}", { cwd: routesDir, posix: true });
 
-  // build a map of dir -> layout file for quick lookup
-  const layoutMap = new Map<string, string>();
+  const layoutMap = new Map<string, LayoutManifestEntry>();
   for (const file of files) {
     const filename = path.basename(file);
     if (LAYOUT_FILE.test(filename)) {
       const dir = path.dirname(file);
-      layoutMap.set(dir, path.resolve(routesDir, file));
+      const absolutePath = path.resolve(routesDir, file);
+      
+      let layoutGuards: any[] = [];
+      try {
+        // safe evaluation of layout exports without breaking on DOM or global targets
+        const layoutModule = jiti.import(absolutePath) as any;
+        if (layoutModule?.config?.guards) {
+          layoutGuards = layoutModule.config.guards;
+        }
+      } catch (err) {
+        console.warn(`[anaemia bundler warning]: Failed parsing config flags on layout: ${file}`);
+      }
+
+      layoutMap.set(dir, {
+        filePath: absolutePath,
+        guards: layoutGuards
+      });
     }
   }
 
@@ -68,19 +94,29 @@ export function scanRoutes(appRoot: string): RouteManifestEntry[] {
     const filename = path.basename(file);
     const dir = path.dirname(file);
 
-    // skip layout files - they're referenced by pages, not routes themselves
     if (LAYOUT_FILE.test(filename)) continue;
 
+    const absolutePagePath = path.resolve(routesDir, file);
     const { urlPattern, chunkName, params, type } = parseFilePath(file);
 
-    // walk up the directory tree to collect layouts
+    let pageGuards: any[] = [];
+    try {
+      const pageModule = jiti.import(absolutePagePath) as any;
+      if (pageModule?.config?.guards) {
+        pageGuards = pageModule.config.guards;
+      }
+    } catch (err) {
+      // quietly ignore parsing problems for pure components lacking a config wrapper
+    }
+
     const layouts = resolveLayoutChain(dir, layoutMap);
 
     entries.push({
       urlPattern,
-      filePath: path.resolve(routesDir, file),
+      filePath: absolutePagePath,
       chunkName,
       layouts,
+      guards: pageGuards,
       type,
       params,
     });
@@ -105,25 +141,27 @@ function parseFilePath(file: string): {
     const isLast = i === segments.length - 1;
 
     if (isLast) {
-      // strip extension and handle special filenames
-      const catchAll = segment.match(CATCH_ALL_FILE);
-      const dynamic = segment.match(DYNAMIC_SEGMENT);
+      const cleanName = segment.replace(/\.(tsx|jsx)$/, "");
 
-      if (catchAll) {
-        params.push(catchAll[1]);
+      if (CATCH_ALL_FILE.test(segment)) {
+        const match = segment.match(CATCH_ALL_FILE)!;
+        params.push(match[1]);
         urlParts.push(`*`);
         type = "catch-all";
-      } else if (dynamic) {
-        params.push(dynamic[1]);
-        urlParts.push(`:${dynamic[1]}`);
-      } else {
-        // index.tsx -> don't add a segment
-        const name = segment.replace(/\.(tsx|jsx)$/, "");
-        if (name !== "index") urlParts.push(name);
+      } else if (DYNAMIC_SEGMENT.test(segment)) {
+        const match = segment.match(DYNAMIC_SEGMENT)!;
+        params.push(match[1]);
+        urlParts.push(`:${match[1]}`);
+      } else if (cleanName !== "index") {
+        urlParts.push(cleanName);
       }
     } else {
-      // directory segment
-      if (segment.startsWith("[") && segment.endsWith("]")) {
+      if (segment.startsWith("[...") && segment.endsWith("]")) {
+        const param = segment.slice(4, -1);
+        params.push(param);
+        urlParts.push(`*`);
+        type = "catch-all";
+      } else if (segment.startsWith("[") && segment.endsWith("]")) {
         const param = segment.slice(1, -1);
         params.push(param);
         urlParts.push(`:${param}`);
@@ -133,27 +171,31 @@ function parseFilePath(file: string): {
     }
   }
 
-  const urlPattern = "/" + urlParts.join("/");
+  const filteredParts = urlParts.filter((part) => part !== "" && part !== ".");
+  let urlPattern = "/" + filteredParts.join("/");
+
+  if (urlPattern === "") {
+    urlPattern = "/";
+  }
+
   const chunkName = file
     .replace(/\.(tsx|jsx)$/, "")
-    .replace(/\[\.\.\.(.+?)\]/, "catchall-$1")
+    .replace(/\[\.\.\.(.+?)\]/g, "catchall-$1")
     .replace(/\[(.+?)\]/g, "param-$1")
     .replace(/\//g, "-")
-    .replace(/^-/, "");
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
 
   return { urlPattern, chunkName, params, type };
 }
 
-function resolveLayoutChain(
-  dir: string,
-  layoutMap: Map<string, string>,
-): string[] {
-  const layouts: string[] = [];
+function resolveLayoutChain(dir: string, layoutMap: Map<string, LayoutManifestEntry>): LayoutManifestEntry[] {
+  const layouts: LayoutManifestEntry[] = [];
   let current = dir;
 
   while (true) {
-    const layout = layoutMap.get(current);
-    if (layout) layouts.unshift(layout);
+    const layoutEntry = layoutMap.get(current);
+    if (layoutEntry) layouts.unshift(layoutEntry);
 
     if (current === "." || current === "") break;
     current = path.dirname(current);

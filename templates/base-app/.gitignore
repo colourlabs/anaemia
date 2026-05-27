@@ -1,3 +1,6 @@
-.anaemia/
-dist/
 node_modules/
+dist/
+.anaemia/
+.rspack/
+.env
+.DS_Store

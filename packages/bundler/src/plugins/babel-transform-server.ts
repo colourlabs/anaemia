@@ -2,17 +2,21 @@ export default function clientServerFnTransform({ types: t }: any) {
   return {
     name: "anaemia-client-server-fn-transform",
     visitor: {
+      Program(state: any) {
+        state.serverFnCounter = 0;
+      },
       CallExpression(path: any, state: any) {
         if (path.node.callee.name === "runOnServer") {
           const filename = state.file.opts.filename || "unknown";
-          const functionHash = Buffer.from(`${filename}:${path.node.start}`).toString("base64url");
+          
+          state.serverFnCounter++;
+          const relativePath = filename.replace(process.cwd(), "");
+          const functionHash = Buffer.from(`${relativePath}:${state.serverFnCounter}`).toString("base64url");
 
-          // generates the self-contained client cache manager function expression
           path.replaceWith(
             t.arrowFunctionExpression(
               [t.restElement(t.identifier("args"))],
               t.blockStatement([
-                // resolve or initialize the window cache
                 t.variableDeclaration("const", [
                   t.variableDeclarator(
                     t.identifier("cache"),
@@ -49,19 +53,33 @@ export default function clientServerFnTransform({ types: t }: any) {
                   ),
                 ]),
 
-                // if this function's hash is cached inside the script data, return it immediately
                 t.ifStatement(
-                  t.logicalExpression("&&", t.identifier("cache"), t.binaryExpression("in", t.stringLiteral(functionHash), t.identifier("cache"))),
+                  t.logicalExpression(
+                    "&&",
+                    t.identifier("cache"),
+                    t.logicalExpression(
+                      "&&",
+                      t.memberExpression(t.identifier("cache"), t.identifier("__LOADER_DATA__")),
+                      t.binaryExpression(
+                        "in",
+                        t.stringLiteral(functionHash),
+                        t.memberExpression(t.identifier("cache"), t.identifier("__LOADER_DATA__"))
+                      )
+                    )
+                  ),
                   t.blockStatement([
-                    t.variableDeclaration("const", [
-                      t.variableDeclarator(t.identifier("res"), t.memberExpression(t.identifier("cache"), t.stringLiteral(functionHash), true)),
-                    ]),
-                    t.expressionStatement(t.unaryExpression("delete", t.memberExpression(t.identifier("cache"), t.stringLiteral(functionHash), true))),
-                    t.returnStatement(t.callExpression(t.memberExpression(t.identifier("Promise"), t.identifier("resolve")), [t.identifier("res")])),
+                    t.returnStatement(
+                      t.callExpression(t.memberExpression(t.identifier("Promise"), t.identifier("resolve")), [
+                        t.memberExpression(
+                          t.memberExpression(t.identifier("cache"), t.identifier("__LOADER_DATA__")),
+                          t.stringLiteral(functionHash),
+                          true
+                        ),
+                      ])
+                    ),
                   ])
                 ),
 
-                // fallback: run standard network RPC fetch call if navigating on client side later
                 t.returnStatement(
                   t.callExpression(
                     t.memberExpression(
@@ -69,6 +87,12 @@ export default function clientServerFnTransform({ types: t }: any) {
                         t.stringLiteral(`/_rpc?id=${functionHash}`),
                         t.objectExpression([
                           t.objectProperty(t.stringLiteral("method"), t.stringLiteral("POST")),
+                          t.objectProperty(
+                            t.stringLiteral("headers"),
+                            t.objectExpression([
+                              t.objectProperty(t.stringLiteral("Content-Type"), t.stringLiteral("application/json"))
+                            ])
+                          ),
                           t.objectProperty(
                             t.stringLiteral("body"),
                             t.callExpression(t.memberExpression(t.identifier("JSON"), t.identifier("stringify")), [t.identifier("args")])

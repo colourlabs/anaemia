@@ -32,7 +32,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
   const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
 
   const resolve = {
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".json", ".css", ".scss"],
+    extensions: [".tsx", ".ts", ".jsx", ".js", ".json", ".scss", ".css"],
     extensionAlias: {
       ".js": [".ts", ".js"],
       ".jsx": [".tsx", ".jsx"],
@@ -40,6 +40,9 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     alias: {
       "anaemia-user-app": entryFile,
       "~": path.resolve(appRoot, "./src"),
+      "@core": path.resolve(appRoot, "./src/core"),
+      "@shared": path.resolve(appRoot, "./src/shared"),
+      "@features": path.resolve(appRoot, "./src/features"),
     },
   };
 
@@ -52,9 +55,20 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
   const useSass = config.styles?.sass !== false;
   const useModules = config.styles?.modules ?? true;
 
-  const scssRule = {
-    test: /\.scss$/,
+  const clientCssRule = {
+    test: /\.(c|sc|sa)ss$/,
     type: useModules ? "css/auto" : "css",
+    use: useSass ? [{ loader: require.resolve("sass-loader"), options: { api: "modern" } }] : [],
+  };
+
+  const serverCssRule = {
+    test: /\.(c|sc|sa)ss$/,
+    type: useModules ? "css/auto" : "css",
+    generator: {
+      css: {
+        exportOnlyLocals: true,
+      },
+    },
     use: useSass ? [{ loader: require.resolve("sass-loader"), options: { api: "modern" } }] : [],
   };
 
@@ -62,6 +76,8 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     name: "client",
     context: appRoot,
     target: "web",
+    devtool: isDev ? "eval-cheap-module-source-map" : false,
+    cache: true,
     entry: {
       client: path.resolve(coreRuntimeDir, "./src/runtime/entry-client.tsx"),
     },
@@ -72,15 +88,47 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
       cssFilename: isDev ? "assets/[name].css" : "assets/[name].[contenthash:8].css",
       publicPath: "/",
     },
+    performance: isDev
+      ? {
+          hints: false,
+          maxAssetSize: 1000000,
+          maxEntrypointSize: 1000000,
+        }
+      : {
+          hints: "warning", // enable strict warnings only during production bundling
+          maxAssetSize: 307200, // 300 KiB
+          maxEntrypointSize: 512000, // 500 KiB
+        },
+    optimization: {
+      sideEffects: true,
+      usedExports: true,
+      splitChunks: isDev
+        ? false
+        : {
+            chunks: "all",
+            maxInitialRequests: 25, // prevents HTTP/2 multiplexing limits
+            minSize: 20000, // only split modules if they are bigger than 20kb
+            cacheGroups: {
+              framework: {
+                chunks: "all",
+                name: "framework",
+                test: /[\\/]node_modules[\\/](solid-js|@solidjs[\\/]router)[\\/]/,
+                priority: 40,
+                enforce: true,
+              },
+              vendor: {
+                chunks: "all",
+                name: "vendor",
+                test: /[\\/]node_modules[\\/]/,
+                priority: 30,
+              },
+            },
+          },
+      minimizer: isDev ? [] : [new rspack.SwcJsMinimizerRspackPlugin()],
+    },
     resolve: {
       ...resolve,
-      conditionNames: [
-        "solid",
-        "browser", 
-        ...(isDev ? ["development"] : []), 
-        "import", 
-        "..."
-      ],
+      conditionNames: ["solid", "browser", ...(isDev ? ["development"] : []), "import", "..."],
       alias: {
         ...resolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
@@ -104,7 +152,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
           allowedHosts: "all",
           headers: { "Access-Control-Allow-Origin": "*" },
           client: {
-            webSocketURL: `ws://localhost:${config.port ? config.port + 1 : 4445}/rspack-hmr`,
+            webSocketURL: `ws://localhost:${config.port || 4444}/_anaemia_hmr`,
           },
         }
       : undefined,
@@ -130,7 +178,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     module: {
       parser: { "css/auto": { namedExports: false } },
       rules: [
-        scssRule,
+        clientCssRule,
         {
           test: /\.[jt]sx?$/,
           exclude: /[\\/]node_modules[\\/]/,
@@ -138,15 +186,8 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
             {
               loader: require.resolve("babel-loader"),
               options: {
-                presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }],
-                  require.resolve("@babel/preset-typescript")
-                ],
-                plugins: [
-                  clientServerFnTransform, 
-                  ...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []), 
-                  ...extraClientBabelPlugins
-                ],
+                presets: [[require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }], require.resolve("@babel/preset-typescript")],
+                plugins: [clientServerFnTransform, ...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []), ...extraClientBabelPlugins],
               },
             },
           ],
@@ -158,10 +199,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
             {
               loader: require.resolve("babel-loader"),
               options: {
-                presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }],
-                  require.resolve("@babel/preset-typescript")
-                ],
+                presets: [[require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }], require.resolve("@babel/preset-typescript")],
                 plugins: [clientServerFnTransform, ...extraClientBabelPlugins],
               },
             },
@@ -190,13 +228,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     },
     resolve: {
       ...resolve,
-      conditionNames: [
-        "node",
-        "solid",
-        ...(isDev ? ["development"] : []), 
-        "import", 
-        "..."
-      ],
+      conditionNames: ["node", "solid", ...(isDev ? ["development"] : []), "import", "..."],
       alias: {
         ...resolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
@@ -213,7 +245,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     module: {
       parser: { "css/auto": { namedExports: false } },
       rules: [
-        scssRule,
+        serverCssRule,
         {
           test: /\.[jt]sx?$/,
           exclude: /[\\/]node_modules[\\/]/,
@@ -221,15 +253,8 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
             {
               loader: require.resolve("babel-loader"),
               options: {
-                presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }],
-                  require.resolve("@babel/preset-typescript")
-                ],
-                plugins: [
-                  ...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []),
-                  serverHashInjector, 
-                  ...extraServerBabelPlugins
-                ],
+                presets: [[require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }], require.resolve("@babel/preset-typescript")],
+                plugins: [...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []), serverHashInjector, ...extraServerBabelPlugins],
               },
             },
           ],
@@ -241,10 +266,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
             {
               loader: require.resolve("babel-loader"),
               options: {
-                presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }],
-                  require.resolve("@babel/preset-typescript")
-                ],
+                presets: [[require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }], require.resolve("@babel/preset-typescript")],
                 plugins: [...extraServerBabelPlugins],
               },
             },

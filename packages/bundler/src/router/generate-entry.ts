@@ -1,0 +1,166 @@
+import fs from "fs";
+import path from "path";
+import type { RouteManifestEntry } from "./scan.js";
+
+type LayoutNode = {
+  kind: "layout";
+  layoutFile: string;
+  layoutIdx: number;
+  relativePath: string;
+  prefixPath: string;
+  children: TreeNode[];
+};
+
+type PageNode = {
+  kind: "page";
+  route: RouteManifestEntry;
+  routeIdx: number;
+  /** path relative to the nearest parent layout (or absolute if no layout) */
+  relativePath: string;
+};
+
+type TreeNode = LayoutNode | PageNode;
+
+/**
+ * recursively groups `routes` by their first remaining layout.
+ * `strippedLayouts` is the layouts slice still to be processed for each route.
+ */
+function buildTree(routes: RouteManifestEntry[], strippedLayouts: string[][], routeIndices: number[], routesDir: string, allLayouts: Map<string, number>, parentPrefix: string): TreeNode[] {
+  const nodes: TreeNode[] = [];
+
+  // Routes with no more layouts left -> leaf pages
+  const leafIndices = strippedLayouts.map((l, i) => (l.length === 0 ? i : -1)).filter((i) => i !== -1);
+
+  for (const i of leafIndices) {
+    const route = routes[routeIndices[i]];
+    const relativePath = toRelativePath(route.urlPattern, parentPrefix);
+    nodes.push({
+      kind: "page",
+      route,
+      routeIdx: routeIndices[i],
+      relativePath,
+    });
+  }
+
+  const byLayout = new Map<string, { ri: number[]; sl: string[][] }>();
+  for (let i = 0; i < strippedLayouts.length; i++) {
+    if (strippedLayouts[i].length === 0) continue;
+    const nextLayout = strippedLayouts[i][0];
+    if (!byLayout.has(nextLayout)) byLayout.set(nextLayout, { ri: [], sl: [] });
+    byLayout.get(nextLayout)!.ri.push(routeIndices[i]);
+    byLayout.get(nextLayout)!.sl.push(strippedLayouts[i].slice(1));
+  }
+
+  for (const [layoutFile, { ri, sl }] of byLayout) {
+    const layoutIdx = allLayouts.get(layoutFile)!;
+    const layoutDir = path.dirname(path.relative(routesDir, layoutFile));
+    const prefixPath = layoutDir === "." ? "/" : `/${layoutDir.replace(/\\/g, "/")}`;
+    const relativePath = toRelativePath(prefixPath, parentPrefix);
+
+    const children = buildTree(routes, sl, ri, routesDir, allLayouts, prefixPath);
+
+    nodes.push({ kind: "layout", layoutFile, layoutIdx, prefixPath, children, relativePath: relativePath });
+  }
+
+  return nodes;
+}
+
+function toRelativePath(absolute: string, parentPrefix: string): string {
+  if (parentPrefix === "/" || parentPrefix === "") return absolute;
+  if (absolute.startsWith(parentPrefix)) {
+    const rel = absolute.slice(parentPrefix.length) || "/";
+    return rel.startsWith("/") ? rel : `/${rel}`;
+  }
+  return absolute;
+}
+
+// JSX code generator
+function renderTree(nodes: TreeNode[], indent = 6): string {
+  const pad = " ".repeat(indent);
+  return nodes
+    .map((node) => {
+      if (node.kind === "page") {
+        return `${pad}<Route path="${node.relativePath}" component={Route${node.routeIdx}} />`;
+      }
+      // layout node - renders <Route path="..." component={LayoutN}> with children
+      const inner = renderTree(node.children, indent + 2);
+      return [`${pad}<Route path="${(node as any).relativePath}" component={Layout${node.layoutIdx}}>`, inner, `${pad}</Route>`].join("\n");
+    })
+    .join("\n");
+}
+
+// entry generator
+export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[]): string {
+  const routesDir = path.resolve(appRoot, "./src/routes");
+  const outDir = path.resolve(appRoot, "./.anaemia");
+  const outPath = path.resolve(outDir, "./__anaemia_entry__.tsx");
+
+  const allLayouts = new Map([...new Set(routes.flatMap((r) => r.layouts))].map((l, i) => [l, i]));
+
+  const routeImports = routes
+    .map((r, i) => {
+      const relativeToRoutes = path.relative(routesDir, r.filePath);
+      const chunkName = relativeToRoutes
+        .replace(/\.[jt]sx?$/, "")
+        .replace(/[^a-zA-Z0-9-_\[\]]/g, "-")
+        .toLowerCase();
+
+      return `
+const Route${i}Raw = lazy(() => import(/* webpackChunkName: "${chunkName}" */ "${r.filePath}"));
+const Route${i} = (props: any) => <Suspense><Route${i}Raw {...props} /></Suspense>;
+`.trim();
+    })
+    .join("\n");
+
+  const layoutImports = [...allLayouts.entries()]
+    .map(([file, i]) => {
+      const relativeToRoutes = path.relative(routesDir, file);
+      const chunkName = ("layout-" + relativeToRoutes
+        .replace(/\.[jt]sx?$/, "")
+        .replace(/[^a-zA-Z0-9-_\[\]]/g, "-"))
+        .toLowerCase();
+
+      return `
+const Layout${i}Raw = lazy(() => import(/* webpackChunkName: "${chunkName}" */ "${file}"));
+const Layout${i} = (props: any) => <Suspense><Layout${i}Raw {...props} /></Suspense>;
+`.trim();
+    })
+    .join("\n");
+
+  // build and render the route tree
+  const tree = buildTree(
+    routes,
+    routes.map((r) => r.layouts),
+    routes.map((_, i) => i),
+    routesDir,
+    allLayouts,
+    "/"
+  );
+  const routeJsx = renderTree(tree, 6);
+
+  const code = `
+// @ts-nocheck
+// auto-generated by anaemia - do not edit!!
+import { lazy, Suspense } from "solid-js";
+import { Route } from "@solidjs/router";
+
+${routeImports}
+
+${layoutImports}
+
+export default function AnaemiaRoutes() {
+  return (
+    <>
+${routeJsx}
+    </>
+  );
+}
+  `.trimStart();
+
+  if (!fs.existsSync(outDir)) {
+    fs.mkdirSync(outDir, { recursive: true });
+  }
+
+  fs.writeFileSync(outPath, code);
+  return outPath;
+}

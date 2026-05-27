@@ -1,27 +1,53 @@
 import { Configuration, rspack } from "@rspack/core";
 import path from "path";
+import fs from "node:fs";
 import type { AnaemiaConfig } from "@anaemia/core";
 import { createRequire } from "node:module";
 
 import clientServerFnTransform from "./plugins/babel-transform-server.js";
-import serverHashInjector from "./plugins/hash-injector-server.js";
+import serverHashInjector from "./plugins/babel-hash-injector-server.js";
+
+import { AnaemiaManifestHydrationPlugin } from "./plugins/rspack-manifest-hydration.js";
+
+import { scanRoutes, scanServerRoutes } from "./router/scan.js";
+import { writeManifest } from "./router/manifest.js";
+import { generateRouterEntry } from "./router/generate-entry.js";
+import { generateServerRoutes } from "./router/generate-server-routes.js";
 
 const require = createRequire(import.meta.url);
 
 export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [Configuration, Configuration] {
+  const isDev = process.env.NODE_ENV !== "production";
+
+  const routes = scanRoutes(appRoot);
+  const serverRoutes = scanServerRoutes(appRoot);
+  writeManifest(appRoot, routes);
+
+  const frameworkInternalDir = path.resolve(appRoot, "./.anaemia");
+  if (!fs.existsSync(frameworkInternalDir)) {
+    fs.mkdirSync(frameworkInternalDir, { recursive: true });
+  }
+
+  const entryFile = generateRouterEntry(appRoot, routes);
+  const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
+
   const resolve = {
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".scss"],
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".json", ".css", ".scss"],
     extensionAlias: {
       ".js": [".ts", ".js"],
-      ".jsx": [".tsx", ".jsx"]
+      ".jsx": [".tsx", ".jsx"],
     },
     alias: {
-      "anaemia-user-app": path.resolve(appRoot, "./src/App.tsx"),
+      "anaemia-user-app": entryFile,
       "~": path.resolve(appRoot, "./src"),
     },
   };
 
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
+  const plugins = config.plugins ?? [];
+
+  const extraClientBabelPlugins = plugins.flatMap((p) => p.babelPlugins?.client ?? []);
+  const extraServerBabelPlugins = plugins.flatMap((p) => p.babelPlugins?.server ?? []);
 
   const useSass = config.styles?.sass !== false;
   const useModules = config.styles?.modules ?? true;
@@ -31,8 +57,8 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     type: useModules ? "css/auto" : "css",
     use: useSass ? [{ loader: require.resolve("sass-loader"), options: { api: "modern" } }] : [],
   };
-  
-  const clientConfig: Configuration = {
+
+  let clientConfig: Configuration = {
     name: "client",
     context: appRoot,
     target: "web",
@@ -41,54 +67,102 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     },
     output: {
       path: path.resolve(appRoot, "./dist/client"),
-      filename: "assets/[name].[contenthash:8].js",
-      chunkFilename: "assets/[name].[contenthash:8].chunk.js",
-      cssFilename: "assets/[name].[contenthash:8].css", 
-      publicPath: config.assets?.publicPath || "/assets/",
+      filename: isDev ? "assets/[name].js" : "assets/[name].[contenthash:8].js",
+      chunkFilename: isDev ? "assets/[name].chunk.js" : "assets/[name].[contenthash:8].chunk.js",
+      cssFilename: isDev ? "assets/[name].css" : "assets/[name].[contenthash:8].css",
+      publicPath: "/",
     },
     resolve: {
       ...resolve,
+      conditionNames: [
+        "solid",
+        "browser", 
+        ...(isDev ? ["development"] : []), 
+        "import", 
+        "..."
+      ],
+      alias: {
+        ...resolve.alias,
+        "solid-refresh": require.resolve("solid-refresh"),
+        [path.resolve(coreRuntimeDir, "./src/runtime/context.ts")]: path.resolve(coreRuntimeDir, "./src/runtime/context.browser.ts"),
+        [path.resolve(coreRuntimeDir, "./dist/runtime/context.js")]: path.resolve(coreRuntimeDir, "./src/runtime/context.browser.ts"),
+      },
       fallback: {
-        "async_hooks": false,
+        async_hooks: false,
         "node:async_hooks": false,
-        "fs": false,
+        fs: false,
         "node:fs": false,
-        "path": false,
-        "node:path": false
-      }
+        path: false,
+        "node:path": false,
+      },
     },
+    devServer: isDev
+      ? {
+          hot: true,
+          liveReload: false,
+          port: config.port ? config.port + 1 : 4445,
+          allowedHosts: "all",
+          headers: { "Access-Control-Allow-Origin": "*" },
+          client: {
+            webSocketURL: `ws://localhost:${config.port ? config.port + 1 : 4445}/rspack-hmr`,
+          },
+        }
+      : undefined,
     plugins: [
       new rspack.HtmlRspackPlugin({
         template: path.resolve(appRoot, "./index.html"),
         filename: "index.html",
-        inject: true,
+        inject: false,
       }),
       new rspack.DefinePlugin({
-        "__ANAEMIA_RUNTIME_CONFIG__": JSON.stringify({ i18n: config.i18n }),
+        __ANAEMIA_RUNTIME_CONFIG__: JSON.stringify({
+          port: config.port,
+          assets: config.assets,
+          styles: config.styles,
+        }),
+        ...config.define?.client,
       }),
       new rspack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
         resource.request = resource.request.replace(/^node:/, "");
       }),
+      new AnaemiaManifestHydrationPlugin({ appRoot }),
     ],
     module: {
-      parser: {
-        "css/auto": {
-          namedExports: false
-        }
-      },
+      parser: { "css/auto": { namedExports: false } },
       rules: [
         scssRule,
         {
-          test: /\.(ts|tsx)$/,
+          test: /\.[jt]sx?$/,
+          exclude: /[\\/]node_modules[\\/]/,
           use: [
             {
               loader: require.resolve("babel-loader"),
               options: {
                 presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true }],
+                  [require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }],
                   require.resolve("@babel/preset-typescript")
                 ],
-                plugins: [clientServerFnTransform, serverHashInjector], 
+                plugins: [
+                  clientServerFnTransform, 
+                  ...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []), 
+                  ...extraClientBabelPlugins
+                ],
+              },
+            },
+          ],
+        },
+        {
+          test: /\.[jt]sx?$/,
+          include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
+          use: [
+            {
+              loader: require.resolve("babel-loader"),
+              options: {
+                presets: [
+                  [require.resolve("babel-preset-solid"), { generate: "dom", hydratable: true, dev: isDev }],
+                  require.resolve("@babel/preset-typescript")
+                ],
+                plugins: [clientServerFnTransform, ...extraClientBabelPlugins],
               },
             },
           ],
@@ -97,7 +171,7 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     },
   };
 
-  const serverConfig: Configuration = {
+  let serverConfig: Configuration = {
     name: "server",
     context: appRoot,
     target: "node",
@@ -111,30 +185,67 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
       chunkFormat: "module",
       chunkLoading: "import",
     },
+    optimization: {
+      nodeEnv: false,
+    },
+    resolve: {
+      ...resolve,
+      conditionNames: [
+        "node",
+        "solid",
+        ...(isDev ? ["development"] : []), 
+        "import", 
+        "..."
+      ],
+      alias: {
+        ...resolve.alias,
+        "solid-refresh": require.resolve("solid-refresh"),
+        "@anaemia/core": path.resolve(coreRuntimeDir, "./src/index.ts"),
+        __anaemia_user_config__: path.resolve(appRoot, "./anaemia.config.ts"),
+        __anaemia_server_routes__: serverRoutesFile,
+      },
+    },
     plugins: [
       new rspack.DefinePlugin({
-        "__ANAEMIA_RUNTIME_CONFIG__": JSON.stringify({ i18n: config.i18n }),
+        ...config.define?.server,
       }),
     ],
-    resolve,
     module: {
-      parser: {
-        "css/auto": {
-          namedExports: false
-        }
-      },
+      parser: { "css/auto": { namedExports: false } },
       rules: [
         scssRule,
         {
-          test: /\.(ts|tsx)$/,
+          test: /\.[jt]sx?$/,
+          exclude: /[\\/]node_modules[\\/]/,
           use: [
             {
               loader: require.resolve("babel-loader"),
               options: {
                 presets: [
-                  [require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true }],
+                  [require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }],
                   require.resolve("@babel/preset-typescript")
                 ],
+                plugins: [
+                  ...(isDev ? [[require.resolve("solid-refresh/babel"), { bundler: "rspack-esm" }]] : []),
+                  serverHashInjector, 
+                  ...extraServerBabelPlugins
+                ],
+              },
+            },
+          ],
+        },
+        {
+          test: /\.[jt]sx?$/,
+          include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
+          use: [
+            {
+              loader: require.resolve("babel-loader"),
+              options: {
+                presets: [
+                  [require.resolve("babel-preset-solid"), { generate: "ssr", hydratable: true, dev: isDev }],
+                  require.resolve("@babel/preset-typescript")
+                ],
+                plugins: [...extraServerBabelPlugins],
               },
             },
           ],
@@ -143,5 +254,13 @@ export function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): [C
     },
   };
 
+  for (const plugin of plugins) {
+    if (plugin.clientRspackConfig) clientConfig = plugin.clientRspackConfig(clientConfig);
+    if (plugin.serverRspackConfig) serverConfig = plugin.serverRspackConfig(serverConfig);
+  }
+
   return [clientConfig, serverConfig];
 }
+
+export { scanRoutes } from "./router/scan.js";
+export { writeManifest } from "./router/manifest.js";

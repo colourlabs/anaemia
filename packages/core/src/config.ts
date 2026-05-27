@@ -1,43 +1,71 @@
-export interface AnaemiaConfig {
+import { Hono } from "hono";
+import type { Configuration } from "@rspack/core";
+
+export interface AnaemiaPlugin {
   /**
-   * the network port the Hono production server should bind to.
-   * @default 3000
+   * unique identifier for the plugin.
    */
-  port?: number;
+  name: string;
 
   /**
-   * global asset distribution options.
+   * extend or modify the rspack config for the client bundle.
    */
+  clientRspackConfig?: (config: Configuration) => Configuration;
+
+  /**
+   * extend or modify the rspack config for the server bundle.
+   */
+  serverRspackConfig?: (config: Configuration) => Configuration;
+
+  /**
+   * add additional babel plugins to the client transform pipeline.
+   */
+  babelPlugins?: {
+    client?: any[];
+    server?: any[];
+  };
+
+  /**
+   * hook into the Hono app instance to register additional routes or middleware.
+   */
+  configureServer?: (app: Hono) => void;
+
+  /**
+   * transform the final HTML string before it is sent to the client.
+   */
+  transformHtml?: (html: string) => string | Promise<string>;
+}
+
+export interface AnaemiaConfig {
+  port?: number;
   assets?: {
-    /**
-     * the public URL path where static bundles are mounted.
-     * @default "/assets/"
-     */
     publicPath?: string;
   };
-
-  /**
-   * internationalization options for localized routing.
-   */
-  i18n?: {
-    locales: string[];
-    defaultLocale: string;
-  };
-
   styles?: {
     sass?: boolean;
     modules?: boolean;
   };
+  experimental?: {
+    outputModule?: boolean;
+  };
 
   /**
-   * toggle advanced compiler settings or experiments.
+   * list of anaemia plugins to apply to the build and runtime.
    */
-  experimental?: {
-    /**
-     * force the server bundle to emit as an ES Module.
-     * @default true
-     */
-    outputModule?: boolean;
+  plugins?: AnaemiaPlugin[];
+
+  /**
+   * inject global constants into the client and/or server bundles at build time.
+   * values must be JSON-serializable expressions — wrap strings in JSON.stringify.
+   * @example
+   * define: {
+   *   client: { __APP_VERSION__: JSON.stringify("1.0.0") },
+   *   server: { __DB_POOL_SIZE__: "10" }
+   * }
+  */
+  define?: {
+    client?: Record<string, string>;
+    server?: Record<string, string>;
   };
 }
 

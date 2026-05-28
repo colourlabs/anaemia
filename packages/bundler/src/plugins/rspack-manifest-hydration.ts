@@ -48,8 +48,9 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
         }
 
         fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 2));
-      } catch (e: any) {
-        console.error("[anaemia compiler] failed updating route-manifest with assets:", e.message);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("[anaemia compiler] failed updating route-manifest with assets:", message);
       }
     });
   }

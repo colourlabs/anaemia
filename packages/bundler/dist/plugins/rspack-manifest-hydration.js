@@ -31,7 +31,8 @@ export class AnaemiaManifestHydrationPlugin {
                 fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 2));
             }
             catch (e) {
-                console.error("[anaemia compiler] failed updating route-manifest with assets:", e.message);
+                const message = e instanceof Error ? e.message : String(e);
+                console.error("[anaemia compiler] failed updating route-manifest with assets:", message);
             }
         });
     }

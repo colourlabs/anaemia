@@ -1,15 +1,20 @@
 import { createRequire } from "node:module";
 import type { AnaemiaPlugin } from "../config.js";
+import type { LightningCssMinimizerRspackPlugin as LightningCssType } from "@rspack/core";
+
+interface RspackModule {
+  LightningCssMinimizerRspackPlugin: typeof LightningCssType;
+}
 
 export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } = {}): AnaemiaPlugin {
   const targets = options.browserslist ?? ["defaults", "not IE 11"];
 
   const localRequire = createRequire(import.meta.url);
-  let rspackModule: any;
+  let rspackModule: RspackModule;
   
   try {
     rspackModule = localRequire("@rspack/core");
-  } catch (err) {
+  } catch {
     throw new Error(
       "[anaemia] The LightningCSS plugin requires '@rspack/core' to be available in the execution workspace."
     );
@@ -46,7 +51,6 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
           minimize: true,
           minimizer: [
             ...(config.optimization?.minimizer ?? []),
-            // Native Rust CSS minification engine
             new rspackModule.LightningCssMinimizerRspackPlugin({
               minimizerOptions: { targets },
             }),

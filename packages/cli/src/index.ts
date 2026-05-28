@@ -17,6 +17,7 @@ import { transform } from "sucrase";
 import { WebSocketServer } from "ws";
 import { WebSocket as NodeWS } from "ws";
 import http from "node:http";
+import { AnaemiaConfig } from "@anaemia/core/config";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,7 @@ const logger = {
   warn(msg: string) {
     console.log(`${this.prefix} ${pc.yellow(msg)}`);
   },
-  error(msg: string, detail?: any) {
+  error(msg: string, detail?: unknown) {
     console.error(`${this.prefix} ${pc.red(msg)}`);
     if (detail) console.error(detail);
   },
@@ -44,17 +45,19 @@ const logger = {
 
 const cli = cac("anaemia");
 
-async function loadUserConfig(appRoot: string) {
-  const configPath = path.resolve(appRoot, "anaemia.config.ts");
+interface UserConfigModule {
+  default?: AnaemiaConfig;
+  [key: string]: unknown;
+}
 
-  if (!fs.existsSync(configPath)) {
-    return {};
-  }
+async function loadUserConfig(appRoot: string): Promise<AnaemiaConfig> {
+  const configPath = path.resolve(appRoot, "anaemia.config.ts");
+  if (!fs.existsSync(configPath)) return {};
 
   try {
     const jiti = createJiti(import.meta.url);
-    const module = (await jiti.import(configPath)) as any;
-    return module.default || module;
+    const module = (await jiti.import(configPath)) as UserConfigModule;
+    return (module.default ?? module) as AnaemiaConfig;
   } catch (err) {
     logger.error("failed parsing your anaemia.config.ts file:", err);
     return {};
@@ -375,7 +378,7 @@ cli
 
               fs.writeFileSync(newPath, compiled.code, "utf8");
               fs.unlinkSync(fullPath);
-            } catch (err) {
+            } catch {
               logger.warn(`failed to strip types from ${file}, skipping...`);
             }
           }

@@ -1,34 +1,29 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export const serverFunctionsRegistry = new Map<string, Function>();
-export const ssrStorage = new AsyncLocalStorage<Map<string, any>>();
+type AnyFn = (...args: unknown[]) => unknown;
 
-(globalThis as any).__ANAEMIA_SERVER_STORAGE__ = ssrStorage;
+export const serverFunctionsRegistry = new Map<string, AnyFn>();
+export const ssrStorage = new AsyncLocalStorage<Map<string, unknown>>();
+(globalThis as unknown as Record<string, unknown>).__ANAEMIA_SERVER_STORAGE__ = ssrStorage;
 
-export function runOnServer(backendFn: Function, id?: string) {
+export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { id: string } {
   const hashId = id || "";
-
-  const rpcProxy = async function (...args: any[]) {
+  const rpcProxy = async function (...args: unknown[]) {
     const result = await backendFn(...args);
-
     const store = ssrStorage.getStore();
     if (store && hashId) {
       if (!store.has("__SERVER_FUNCTION_DATA__")) {
         store.set("__SERVER_FUNCTION_DATA__", {});
       }
-      
-      const functionCache = store.get("__SERVER_FUNCTION_DATA__");
+      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<string, Record<string, unknown>>;
       if (!functionCache[hashId]) {
         functionCache[hashId] = {};
       }
-      
       const paramKey = JSON.stringify(args);
       functionCache[hashId][paramKey] = result;
     }
-
     return result;
   };
-
   rpcProxy.id = hashId;
-  return rpcProxy;
+  return rpcProxy as unknown as T & { id: string };
 }

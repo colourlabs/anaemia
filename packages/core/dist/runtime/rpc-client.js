@@ -19,17 +19,19 @@ function findLooseCacheMatch(serverFunctionData, targetArg) {
         return { matchingKey: strictKey, data: serverFunctionData[strictKey] };
     }
     const lookUpString = `["${targetArg}"`;
-    const matchedKey = Object.keys(serverFunctionData).find(key => key.startsWith(lookUpString));
+    const matchedKey = Object.keys(serverFunctionData).find((key) => key.startsWith(lookUpString));
     return matchedKey ? { matchingKey: matchedKey, data: serverFunctionData[matchedKey] } : undefined;
+}
+function getServerStore() {
+    return globalThis.__ANAEMIA_SERVER_STORAGE__?.getStore?.();
 }
 export function $$executeClientRpc(hashId) {
     const asyncRpcCall = async function (...args) {
         if (isServer) {
-            const globalStorage = globalThis.__ANAEMIA_SERVER_STORAGE__;
-            const store = globalStorage?.getStore();
+            const store = getServerStore();
             if (store) {
                 const functionCache = store.get("__SERVER_FUNCTION_DATA__");
-                if (functionCache && functionCache[hashId]) {
+                if (functionCache?.[hashId]) {
                     const match = findLooseCacheMatch(functionCache[hashId], args[0]);
                     if (match)
                         return match.data;
@@ -38,8 +40,8 @@ export function $$executeClientRpc(hashId) {
             return undefined;
         }
         ensureCacheInitialized();
-        const serverFunctionData = _clientCache.__SERVER_FUNCTION_DATA__?.[hashId];
-        const match = findLooseCacheMatch(serverFunctionData, args[0]);
+        const serverFunctionData = _clientCache?.__SERVER_FUNCTION_DATA__?.[hashId];
+        const match = findLooseCacheMatch(serverFunctionData ?? {}, args[0]);
         if (match) {
             const { matchingKey, data } = match;
             delete serverFunctionData[matchingKey];
@@ -57,11 +59,10 @@ export function $$executeClientRpc(hashId) {
     asyncRpcCall.id = hashId;
     asyncRpcCall.readHydrationCache = function (...args) {
         if (isServer) {
-            const globalStorage = globalThis.__ANAEMIA_SERVER_STORAGE__;
-            const store = globalStorage?.getStore();
+            const store = getServerStore();
             if (store) {
                 const functionCache = store.get("__SERVER_FUNCTION_DATA__");
-                if (functionCache && functionCache[hashId]) {
+                if (functionCache?.[hashId]) {
                     const match = findLooseCacheMatch(functionCache[hashId], args[0]);
                     if (match)
                         return match.data;
@@ -70,8 +71,8 @@ export function $$executeClientRpc(hashId) {
             return undefined;
         }
         ensureCacheInitialized();
-        const serverFunctionData = _clientCache.__SERVER_FUNCTION_DATA__?.[hashId];
-        const match = findLooseCacheMatch(serverFunctionData, args[0]);
+        const serverFunctionData = _clientCache?.__SERVER_FUNCTION_DATA__?.[hashId];
+        const match = findLooseCacheMatch(serverFunctionData ?? {}, args[0]);
         return match ? match.data : undefined;
     };
     return asyncRpcCall;

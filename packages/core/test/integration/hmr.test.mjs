@@ -11,14 +11,14 @@ const require = createRequire(import.meta.url);
 const { createJiti } = require("jiti");
 const jiti = createJiti(import.meta.url);
 
-function resolveConfigPort() {
+async function resolveConfigPort() {
   const configPath = path.resolve(projectRoot, "anaemia.config.ts");
-  
+
   if (fs.existsSync(configPath)) {
     try {
-      const userConfigModule = jiti(configPath);
+      const userConfigModule = await jiti.import(configPath);
       const userConfig = userConfigModule.default || userConfigModule;
-      
+
       if (userConfig && typeof userConfig.port === "number") {
         return userConfig.port;
       }
@@ -50,9 +50,7 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
     if (browser) await browser.close();
 
     if (devProcess && devProcess.pid) {
-      try {
-        process.kill(-devProcess.pid, "SIGKILL");
-      } catch (e) {}
+      process.kill(-devProcess.pid, "SIGKILL");
     }
   });
 
@@ -76,15 +74,14 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
       const checkPortReady = async () => {
         for (let i = 0; i < 20; i++) {
-          try {
-            // Dynamic URL Check
-            const res = await fetch(BASE_URL);
-            if (res.status === 200 || res.status === 404) {
-              clearTimeout(timeout);
-              resolve();
-              return;
-            }
-          } catch (e) {}
+          // Dynamic URL Check
+          const res = await fetch(BASE_URL);
+          if (res.status === 200 || res.status === 404) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+
           await new Promise((r) => setTimeout(r, 200));
         }
         reject(new Error(`Server process started but port ${TARGET_PORT} never responded to HTTP requests.`));
@@ -129,6 +126,7 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
     await page.waitForFunction(
       () => {
+        // eslint-disable-next-line no-undef
         const h1 = document.querySelector("h1");
         return h1 && h1.textContent.trim() === "anaemia updated!";
       },
@@ -143,10 +141,6 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
     const titleText = await page.textContent("h1");
     assert.equal(titleText.trim(), "anaemia updated!");
-    assert.equal(
-      consoleErrors.length, 
-      0, 
-      `Errors detected after page refresh: ${consoleErrors.map(e => e.message).join(", ")}`
-    );
+    assert.equal(consoleErrors.length, 0, `Errors detected after page refresh: ${consoleErrors.map((e) => e.message).join(", ")}`);
   });
 });

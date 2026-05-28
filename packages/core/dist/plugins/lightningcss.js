@@ -6,7 +6,7 @@ export function anaemiaLightningCssPlugin(options = {}) {
     try {
         rspackModule = localRequire("@rspack/core");
     }
-    catch (err) {
+    catch {
         throw new Error("[anaemia] The LightningCSS plugin requires '@rspack/core' to be available in the execution workspace.");
     }
     return {
@@ -36,7 +36,6 @@ export function anaemiaLightningCssPlugin(options = {}) {
                     minimize: true,
                     minimizer: [
                         ...(config.optimization?.minimizer ?? []),
-                        // Native Rust CSS minification engine
                         new rspackModule.LightningCssMinimizerRspackPlugin({
                             minimizerOptions: { targets },
                         }),

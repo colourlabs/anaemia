@@ -13,13 +13,13 @@ export interface LoaderArgs<Params extends Record<string, string> = Record<strin
 /**
  * represents an application page loader function.
  */
-export type LoaderFunction<ResponseData = any, Params extends Record<string, string> = Record<string, string>> = (args: LoaderArgs<Params>) => Promise<ResponseData> | ResponseData;
+export type LoaderFunction<ResponseData = unknown, Params extends Record<string, string> = Record<string, string>> = (args: LoaderArgs<Params>) => Promise<ResponseData> | ResponseData;
 
 /**
  * extracts and unwraps the true data structure returned by a server function or loader.
  * essential for typing useRouteData() effortlessly in user-space.
  */
-export type InferServerData<T extends (...args: any[]) => any> = Awaited<ReturnType<T>>;
+export type InferServerData<T extends (...args: unknown[]) => unknown> = Awaited<ReturnType<T>>;
 
 export type GuardContext = {
   params: Record<string, string>;

@@ -36,6 +36,7 @@
     "test:integration": "pnpm run build && node --test test/integration/*.test.mjs"
   },
   "dependencies": {
+    "@babel/core": "^7.29.7",
     "@hono/node-server": "^2.0.4",
     "@solidjs/router": "^0.16.1",
     "hono": "^4.12.23"
@@ -54,6 +55,7 @@
     }
   },
   "devDependencies": {
+    "@types/babel__core": "^7.20.5",
     "@types/node": "^25.9.1",
     "jiti": "^2.7.0",
     "playwright": "^1.60.0"

@@ -27,25 +27,22 @@ export function RouteDataController(props) {
     const location = useLocation();
     const ssrData = readSSRData();
     const [resource] = createResource(() => location.pathname, () => {
-        if (isServer && ssrData !== undefined) {
+        if (isServer && ssrData !== undefined)
             return ssrData;
-        }
         return props.loader({
             params,
             location,
-            request: createRouteRequest(location.pathname)
+            request: createRouteRequest(location.pathname),
         });
     }, {
         initialValue: ssrData,
-        ssrLoadFrom: "initial"
+        ssrLoadFrom: "initial",
     });
     return createComponent(RouteDataContext.Provider, {
-        value: {
-            data: resource
-        },
+        value: { data: resource },
         get children() {
             return props.children;
-        }
+        },
     });
 }
 export function useRouteData() {

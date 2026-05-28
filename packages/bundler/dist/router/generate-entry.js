@@ -100,7 +100,7 @@ export function generateRouterEntry(appRoot, routes) {
         const relativeToRoutes = path.relative(routesDir, r.filePath);
         const chunkName = relativeToRoutes
             .replace(/\.[jt]sx?$/, "")
-            .replace(/[^a-zA-Z0-9-_\[\]]/g, "-")
+            .replace(/[^a-zA-Z0-9-_[\]]/g, "-")
             .toLowerCase();
         const guardSources = [...r.layouts.map((l) => l.filePath), r.filePath]
             .map((fp) => {
@@ -141,8 +141,6 @@ const Route${i}Wrapped = (props) => (
         .join("\n");
     const layoutImports = [...allLayouts.entries()]
         .map(([file, i]) => {
-        const relativeToRoutes = path.relative(routesDir, file);
-        const chunkName = ("layout-" + relativeToRoutes.replace(/\.[jt]sx?$/, "").replace(/[^a-zA-Z0-9-_\[\]]/g, "-")).toLowerCase();
         return `import Layout${i} from "${file.replace(/\\/g, "/")}";`;
     })
         .join("\n");
@@ -191,7 +189,6 @@ ${routeJsx}
     const chunkPreloadRegistryCode = buildPreloadMapString(conventionalRoutes, allLayouts);
     const preloadFnCode = `
 export async function preloadActiveClientRoute(pathname: string) {
-  // Simple match logic against parameters or route patterns
   const pattern = Object.keys(chunkPreloadRegistry).find(p => {
     if (p === pathname) return true;
     const regexStr = p.replace(/:([a-zA-Z0-9_-]+)/g, "([^/]+)").replace(/\\*([a-zA-Z0-9_-]*)/g, "(.*)");

@@ -1,4 +1,5 @@
 import type { AnaemiaConfig } from "@anaemia/core";
+import { PluginItem } from "@babel/core";
 export declare function createStyleRules(config: AnaemiaConfig): {
     client: {
         test: RegExp;
@@ -29,7 +30,7 @@ export declare function createStyleRules(config: AnaemiaConfig): {
 export declare function createBabelRule({ isServer, isDev, plugins, }: {
     isServer: boolean;
     isDev: boolean;
-    plugins: any[];
+    plugins?: PluginItem[];
 }): {
     test: RegExp;
     use: {
@@ -40,7 +41,7 @@ export declare function createBabelRule({ isServer, isDev, plugins, }: {
                 hydratable: boolean;
                 dev: boolean;
             })[])[];
-            plugins: any[];
+            plugins: PluginItem[];
         };
     }[];
 };

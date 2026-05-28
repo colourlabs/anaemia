@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import type { AnaemiaConfig } from "@anaemia/core";
+import { PluginItem } from "@babel/core";
 
 const require = createRequire(import.meta.url);
 
@@ -35,7 +36,7 @@ export function createBabelRule({
 }: {
   isServer: boolean;
   isDev: boolean;
-  plugins: any[];
+  plugins?: PluginItem[];
 }) {
   const generateMode = isServer ? "ssr" : "dom";
 

@@ -41,13 +41,12 @@ const logger = {
 const cli = cac("anaemia");
 async function loadUserConfig(appRoot) {
     const configPath = path.resolve(appRoot, "anaemia.config.ts");
-    if (!fs.existsSync(configPath)) {
+    if (!fs.existsSync(configPath))
         return {};
-    }
     try {
         const jiti = createJiti(import.meta.url);
         const module = (await jiti.import(configPath));
-        return module.default || module;
+        return (module.default ?? module);
     }
     catch (err) {
         logger.error("failed parsing your anaemia.config.ts file:", err);
@@ -316,7 +315,7 @@ cli
                         fs.writeFileSync(newPath, compiled.code, "utf8");
                         fs.unlinkSync(fullPath);
                     }
-                    catch (err) {
+                    catch {
                         logger.warn(`failed to strip types from ${file}, skipping...`);
                     }
                 }

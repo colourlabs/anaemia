@@ -11,6 +11,10 @@ const tsParser = isTypeScript ? await import("@typescript-eslint/parser").then(m
 export default [
   js.configs.recommended,
   {
+    ignores: ["dist/**", ".anaemia/**"],
+  },
+  
+  {
     languageOptions: {
       ecmaVersion: 2026,
       sourceType: "module",

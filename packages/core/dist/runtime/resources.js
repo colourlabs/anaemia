@@ -5,7 +5,8 @@ export function createServerResource(source, serverFn, options) {
         let ssrInitialValue = undefined;
         const store = globalThis.__ANAEMIA_SERVER_STORAGE__?.getStore?.();
         if (store && serverFn.id) {
-            const fnCache = store.get("__SERVER_FUNCTION_DATA__")?.[serverFn.id];
+            const fnData = store.get("__SERVER_FUNCTION_DATA__");
+            const fnCache = fnData?.[serverFn.id];
             if (fnCache) {
                 const key = JSON.stringify([source()]);
                 if (fnCache[key] !== undefined)

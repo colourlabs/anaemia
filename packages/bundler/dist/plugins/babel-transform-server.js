@@ -1,4 +1,5 @@
 import { createServerFunctionId } from "../server-function-id.js";
+;
 export default function clientServerFnTransform({ types: t }) {
     return {
         name: "anaemia-client-server-fn-transform",
@@ -15,7 +16,7 @@ export default function clientServerFnTransform({ types: t }) {
                 }
             },
             CallExpression(path, state) {
-                if (path.node.callee.name === "runOnServer") {
+                if (t.isIdentifier(path.node.callee) && path.node.callee.name === "runOnServer") {
                     state.hasRunOnServer = true;
                     const filename = state.file.opts.filename || "unknown";
                     const serverFunctionCallback = path.node.arguments[0];
@@ -27,13 +28,13 @@ export default function clientServerFnTransform({ types: t }) {
                         path.get('arguments.0').remove();
                     }
                     // this whole thing is just magic bro
+                    // wtf is this ast manipulation
                     path.replaceWith(t.callExpression(t.arrowFunctionExpression([], t.blockStatement([
                         t.variableDeclaration("const", [
                             t.variableDeclarator(t.identifier("_rpc"), t.arrowFunctionExpression([t.restElement(t.identifier("args"))], t.callExpression(t.callExpression(t.identifier("$$executeClientRpc"), [
                                 t.stringLiteral(functionHash)
                             ]), [t.spreadElement(t.identifier("args"))])))
                         ]),
-                        // ✅ Inside the blockStatement array, not a 3rd arg to arrowFunctionExpression
                         t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("_rpc"), t.identifier("id")), t.stringLiteral(functionHash))),
                         t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier("_rpc"), t.identifier("readHydrationCache")), t.arrowFunctionExpression([t.identifier("sourceArg")], t.blockStatement([
                             t.variableDeclaration("const", [

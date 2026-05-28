@@ -1,14 +1,19 @@
 import { createServerFunctionId } from "../server-function-id.js";
+import type { NodePath, PluginObj, PluginPass, types as BabelTypes } from "@babel/core";
 
-export default function clientServerFnTransform({ types: t }: any) {
+interface PluginState extends PluginPass {
+  hasRunOnServer: boolean;
+};
+
+export default function clientServerFnTransform({ types: t }: { types: typeof BabelTypes }): PluginObj<PluginState> {
   return {
     name: "anaemia-client-server-fn-transform",
     visitor: {
       Program: {
-        enter(path: any, state: any) {
+        enter(path: NodePath<BabelTypes.Program>, state: PluginState) {
           state.hasRunOnServer = false;
         },
-        exit(path: any, state: any) {
+        exit(path: NodePath<BabelTypes.Program>, state: PluginState) {
           if (state.hasRunOnServer) {
             const importDeclaration = t.importDeclaration(
               [t.importSpecifier(t.identifier("$$executeClientRpc"), t.identifier("$$executeClientRpc"))],
@@ -18,8 +23,8 @@ export default function clientServerFnTransform({ types: t }: any) {
           }
         }
       },
-      CallExpression(path: any, state: any) {
-        if (path.node.callee.name === "runOnServer") {
+      CallExpression(path: NodePath<BabelTypes.CallExpression>, state: PluginState) {
+        if (t.isIdentifier(path.node.callee) && path.node.callee.name === "runOnServer") {
           state.hasRunOnServer = true;
           const filename = state.file.opts.filename || "unknown";
 
@@ -35,6 +40,7 @@ export default function clientServerFnTransform({ types: t }: any) {
           }
 
           // this whole thing is just magic bro
+          // wtf is this ast manipulation
           path.replaceWith(
             t.callExpression(
               t.arrowFunctionExpression(
@@ -54,7 +60,6 @@ export default function clientServerFnTransform({ types: t }: any) {
                       )
                     )
                   ]),
-                  // ✅ Inside the blockStatement array, not a 3rd arg to arrowFunctionExpression
                   t.expressionStatement(
                     t.assignmentExpression(
                       "=",

@@ -7,18 +7,18 @@ import { Router } from "@solidjs/router";
 import { ssrStorage, serverFunctionsRegistry } from "./context.js";
 import fs from "node:fs";
 import path from "path";
-// @ts-ignore - mapped by Rspack
+// @ts-expect-error - resolved by Rspack
 import App from "anaemia-user-app";
-// @ts-ignore - mapped by Rspack
+// @ts-expect-error - resolved by Rspack
 import { preloadActiveClientRoute, serverLoaderRegistry, serverGuardRegistry } from "anaemia-user-app";
-// @ts-ignore - mapped by Rspack
+// @ts-expect-error - resolved by Rspack
 import { registerServerRoutes } from "__anaemia_server_routes__";
 const port = Number(process.env.PORT) || 3000;
 const isDev = process.env.NODE_ENV !== "production";
 const devPort = Number(process.env.RSPACK_DEV_PORT) || 4445;
 const devServerUrl = `http://localhost:${devPort}`;
 let sortedRoutes = null;
-const ENTRY_TAG_REGEX = /(<([a-zA-Z0-9\-]+)[^>]*anaemia-entry[^>]*>)(.*?)(<\/\2>)/is;
+const ENTRY_TAG_REGEX = /(<([a-zA-Z0-9-]+)[^>]*anaemia-entry[^>]*>)(.*?)(<\/\2>)/is;
 const app = new Hono();
 app.use("*", compress());
 app.use("*", async (c, next) => {
@@ -41,7 +41,7 @@ if (isDev) {
             c.header("Expires", "0");
             return c.body(await response.arrayBuffer());
         }
-        catch (err) {
+        catch {
             return c.text("failed to connect to Rspack dev server asset bridge", 500);
         }
     };
@@ -81,7 +81,8 @@ app.post("/_rpc", async (c) => {
         return c.json(result);
     }
     catch (error) {
-        return c.json({ error: error.message }, 500);
+        const message = error instanceof Error ? error.message : "Internal server error";
+        return c.json({ error: message }, 500);
     }
 });
 app.use(async (c, next) => {
@@ -142,7 +143,7 @@ const loadManifestAndTemplate = async () => {
             if (fs.existsSync(manifestPath))
                 memoizedManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
         }
-        catch (err) {
+        catch {
             console.warn("build assets not fully initialized during bootstrapping cycle.");
         }
     }
@@ -202,7 +203,6 @@ function matchRoute(manifest, reqPath) {
         params: {},
     };
 }
-// Look at your app.get("*") loop and update the processing logic:
 app.get("*", async (c) => {
     if (isDev)
         await loadManifestAndTemplate();
@@ -215,9 +215,8 @@ app.get("*", async (c) => {
     const { activeChunk, targetPattern, statusCode: matchedStatus, params } = matchRoute(manifest, reqPath);
     let statusCode = matchedStatus;
     const loaderArgs = { params, request: c.req.raw };
-    // Re-verify and isolate our store reference map instance
     const store = ssrStorage.getStore() || new Map();
-    let htmlPayload = "";
+    let htmlPayload;
     if (targetPattern) {
         try {
             const guardResult = await runGuards(targetPattern, { params, request: c.req.raw, url: reqPath });
@@ -233,9 +232,6 @@ app.get("*", async (c) => {
             return c.text("Internal Server Error", 500);
         }
     }
-    // ─── THE ARCHITECTURE WRAPPER FIX ───
-    // We force both the awaitable loader execution AND the Solid rendering cycle 
-    // to run explicitly inside a fresh execution slice of the tracking store.
     try {
         htmlPayload = await ssrStorage.run(store, async () => {
             if (targetPattern) {
@@ -246,7 +242,6 @@ app.get("*", async (c) => {
                 }
             }
             await preloadActiveClientRoute(reqPath);
-            // Now when Solid calls $$executeClientRpc, the store is 100% active and tracked!
             return await renderToStringAsync(() => (<Router url={reqPath}>
           <App />
         </Router>));
@@ -258,7 +253,9 @@ app.get("*", async (c) => {
         const error500Pattern = manifest.errors?.["500"];
         const error500Loader = error500Pattern ? serverLoaderRegistry.get(error500Pattern) : null;
         if (error500Loader) {
-            const runtimeContextPayload = { message: err.message, stack: isDev ? err.stack : undefined };
+            const message = err instanceof Error ? err.message : String(err);
+            const stack = err instanceof Error ? err.stack : undefined;
+            const runtimeContextPayload = { message, stack: isDev ? stack : undefined };
             store.set("__LOADER_DATA__", runtimeContextPayload);
             try {
                 htmlPayload = await ssrStorage.run(store, async () => {
@@ -272,10 +269,10 @@ app.get("*", async (c) => {
             }
         }
         else {
-            htmlPayload = `<h1>500 Internal Server Error</h1><pre>${isDev ? err.stack : ""}</pre>`;
+            const stack = err instanceof Error ? err.stack : String(err);
+            htmlPayload = `<h1>500 Internal Server Error</h1><pre>${isDev ? stack : ""}</pre>`;
         }
     }
-    // ─── THE REMAINING INJECTIONS (Keep this exactly as you had it) ───
     let assetScripts = "";
     let assetStyles = "";
     if (manifest.chunks) {
@@ -307,22 +304,14 @@ app.get("*", async (c) => {
     const rawStorePayload = Object.fromEntries(store);
     const finalHydrationStatePayload = {
         __LOADER_DATA__: rawStorePayload.__LOADER_DATA__ || {},
-        __SERVER_FUNCTION_DATA__: rawStorePayload.__SERVER_FUNCTION_DATA__ || {}
+        __SERVER_FUNCTION_DATA__: rawStorePayload.__SERVER_FUNCTION_DATA__ || {},
     };
-    const serializedData = JSON.stringify(finalHydrationStatePayload)
-        .replace(/&/g, "\\u0026")
-        .replace(/</g, "\\u003c")
-        .replace(/>/g, "\\u003e")
-        .replace(/\//g, "\\u002f");
+    const serializedData = JSON.stringify(finalHydrationStatePayload).replace(/&/g, "\\u0026").replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\//g, "\\u002f");
     const dataScript = `<script id="__ANAEMIA_DATA__" type="application/json">${serializedData}</script>\n`;
-    const devNoCacheTag = isDev
-        ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n`
-        : "";
+    const devNoCacheTag = isDev ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n` : "";
     const combinedHeadInjections = `${devNoCacheTag}${assetStyles}${dataScript}${hydrationScript}`;
     const sanitizedPayload = htmlPayload.trim();
-    let completeHtmlOutput = ENTRY_TAG_REGEX.test(template)
-        ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`)
-        : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
+    let completeHtmlOutput = ENTRY_TAG_REGEX.test(template) ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`) : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
     completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${combinedHeadInjections}`);
     completeHtmlOutput = completeHtmlOutput.replace("</body>", `${assetScripts}</body>`);
     if (isDev) {

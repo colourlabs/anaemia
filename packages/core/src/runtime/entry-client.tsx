@@ -1,7 +1,7 @@
 import { hydrate, render } from "solid-js/web";
 import { Router } from "@solidjs/router";
 
-// @ts-ignore
+// @ts-expect-error - resolved by Rspack
 import App, { preloadActiveClientRoute } from "anaemia-user-app";
 
 const mountTarget = document.querySelector(

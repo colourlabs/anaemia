@@ -93,7 +93,7 @@ function renderTree(nodes: TreeNode[], indent = 6): string {
         return `${pad}<Route path="${routePath}" component={Route${node.routeIdx}Wrapped} />`;
       }
 
-      let layoutPath = (node as any).relativePath;
+      let layoutPath = node.relativePath;
       const inner = renderTree(node.children, indent + 2);
 
       return [`${pad}<Route path="${layoutPath}" component={Layout${node.layoutIdx}}>`, inner, `${pad}</Route>`].join("\n");
@@ -136,7 +136,7 @@ export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[
       const relativeToRoutes = path.relative(routesDir, r.filePath);
       const chunkName = relativeToRoutes
         .replace(/\.[jt]sx?$/, "")
-        .replace(/[^a-zA-Z0-9-_\[\]]/g, "-")
+        .replace(/[^a-zA-Z0-9-_[\]]/g, "-")
         .toLowerCase();
 
       const guardSources = [...r.layouts.map((l) => l.filePath), r.filePath]
@@ -180,9 +180,6 @@ const Route${i}Wrapped = (props) => (
 
   const layoutImports = [...allLayouts.entries()]
     .map(([file, i]) => {
-      const relativeToRoutes = path.relative(routesDir, file);
-      const chunkName = ("layout-" + relativeToRoutes.replace(/\.[jt]sx?$/, "").replace(/[^a-zA-Z0-9-_\[\]]/g, "-")).toLowerCase();
-
       return `import Layout${i} from "${file.replace(/\\/g, "/")}";`;
     })
     .join("\n");
@@ -251,7 +248,6 @@ ${routeJsx}
 
   const preloadFnCode = `
 export async function preloadActiveClientRoute(pathname: string) {
-  // Simple match logic against parameters or route patterns
   const pattern = Object.keys(chunkPreloadRegistry).find(p => {
     if (p === pathname) return true;
     const regexStr = p.replace(/:([a-zA-Z0-9_-]+)/g, "([^/]+)").replace(/\\*([a-zA-Z0-9_-]*)/g, "(.*)");

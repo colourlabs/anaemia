@@ -3,7 +3,7 @@ import path from "path";
 import { createJiti } from "jiti";
 import fs from "node:fs";
 import { getAliases } from "../aliases.js";
-export function createScanJiti(appRoot) {
+function createScanJiti(appRoot) {
     return createJiti(import.meta.url, {
         interopDefault: true,
         alias: getAliases(appRoot),
@@ -24,6 +24,13 @@ export function scanServerRoutes(appRoot) {
         };
     });
 }
+function resolveConfigPath(absolutePath) {
+    const configPath = absolutePath
+        .replace(/\.(tsx|jsx)$/, ".config.$1")
+        .replace(".config.tsx", ".config.ts")
+        .replace(".config.jsx", ".config.js");
+    return fs.existsSync(configPath) ? configPath : absolutePath;
+}
 export async function scanRoutes(appRoot) {
     const jiti = createScanJiti(appRoot);
     const routesDir = path.resolve(appRoot, "./src/routes");
@@ -35,18 +42,13 @@ export async function scanRoutes(appRoot) {
             const dir = path.dirname(file);
             const absolutePath = path.resolve(routesDir, file);
             let layoutGuards = [];
-            const configPath = absolutePath
-                .replace(/\.(tsx|jsx)$/, ".config.$1")
-                .replace(".config.tsx", ".config.ts")
-                .replace(".config.jsx", ".config.js");
-            const moduleToScan = fs.existsSync(configPath) ? configPath : absolutePath;
             try {
-                const layoutModule = jiti.import(moduleToScan);
+                const layoutModule = (await jiti.import(resolveConfigPath(absolutePath)));
                 if (layoutModule?.config?.guards) {
                     layoutGuards = layoutModule.config.guards;
                 }
             }
-            catch (err) {
+            catch {
                 console.warn(`[anaemia bundler warning]: Failed parsing config flags on layout: ${file}`);
             }
             layoutMap.set(dir, {
@@ -66,26 +68,20 @@ export async function scanRoutes(appRoot) {
         const absolutePagePath = path.resolve(routesDir, file);
         const { urlPattern, chunkName, params, type } = parseFilePath(file);
         let pageGuards = [];
-        const pageConfigPath = absolutePagePath
-            .replace(/\.(tsx|jsx)$/, ".config.$1")
-            .replace(".config.tsx", ".config.ts")
-            .replace(".config.jsx", ".config.js");
-        const pageModuleToScan = fs.existsSync(pageConfigPath) ? pageConfigPath : absolutePagePath;
         try {
-            const pageModule = (await jiti.import(pageModuleToScan));
+            const pageModule = (await jiti.import(resolveConfigPath(absolutePagePath)));
             if (pageModule?.config?.guards) {
                 pageGuards = pageModule.config.guards;
             }
         }
-        catch (err) {
+        catch {
             // quietly ignore parsing problems for pure components lacking a config wrapper
         }
-        const layouts = resolveLayoutChain(dir, layoutMap);
         entries.push({
             urlPattern,
             filePath: absolutePagePath,
             chunkName,
-            layouts,
+            layouts: resolveLayoutChain(dir, layoutMap),
             guards: pageGuards,
             type,
             params,
@@ -136,10 +132,7 @@ function parseFilePath(file) {
         }
     }
     const filteredParts = urlParts.filter((part) => part !== "" && part !== ".");
-    let urlPattern = "/" + filteredParts.join("/");
-    if (urlPattern === "") {
-        urlPattern = "/";
-    }
+    const urlPattern = filteredParts.length === 0 ? "/" : "/" + filteredParts.join("/");
     const chunkName = file
         .replace(/\.(tsx|jsx)$/, "")
         .replace(/\[\.\.\.(.+?)\]/g, "catchall-$1")

@@ -1,6 +1,6 @@
 export declare function $$executeClientRpc(hashId: string): {
-    (...args: unknown[]): Promise<any>;
+    (...args: unknown[]): Promise<unknown>;
     id: string;
-    readHydrationCache(...args: unknown[]): any;
+    readHydrationCache(...args: unknown[]): unknown;
 };
 //# sourceMappingURL=rpc-client.d.ts.map

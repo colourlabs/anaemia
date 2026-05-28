@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Configuration } from "@rspack/core";
+import type { PluginItem } from "@babel/core";
 export interface AnaemiaPlugin {
     /**
      * unique identifier for the plugin.
@@ -17,8 +18,8 @@ export interface AnaemiaPlugin {
      * add additional babel plugins to the client transform pipeline.
      */
     babelPlugins?: {
-        client?: any[];
-        server?: any[];
+        client?: PluginItem[];
+        server?: PluginItem[];
     };
     /**
      * hook into the Hono app instance to register additional routes or middleware.

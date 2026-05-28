@@ -12,7 +12,8 @@
   "dependencies": {
     "@anaemia/bundler": "workspace:*",
     "@anaemia/core": "workspace:*",
-    "@rspack/core": "^2.0.4",
+    "@rspack/core": "^2.0.5",
+    "@rspack/dev-server": "^2.0.2",
     "cac": "^7.0.0",
     "cross-spawn": "^7.0.6",
     "jiti": "^2.7.0",
@@ -22,7 +23,6 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@rspack/dev-server": "^2.0.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.9.1",

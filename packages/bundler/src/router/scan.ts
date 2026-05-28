@@ -4,7 +4,7 @@ import { createJiti } from "jiti";
 import fs from "node:fs";
 import { getAliases } from "../aliases.js";
 
-export function createScanJiti(appRoot: string) {
+function createScanJiti(appRoot: string) {
   return createJiti(import.meta.url, {
     interopDefault: true,
     alias: getAliases(appRoot),
@@ -15,37 +15,33 @@ export type RouteType = "page" | "layout" | "catch-all";
 
 export interface LayoutManifestEntry {
   filePath: string;
-  guards: any[];
+  guards: RouteGuard[];
 }
 
 export interface RouteManifestEntry {
-  // the URL pattern this route matches
-  // e.g. /blog/:slug, /dashboard, /
   urlPattern: string;
-
-  // absolute path to the route file
   filePath: string;
-
-  // rspack chunk name derived from the path
   chunkName: string;
-
-  // ordered list of layout files that wrap this route
-  // e.g. [root layout, dashboard layout]
   layouts: LayoutManifestEntry[];
-
-  // holds page level guards
-  guards: any[];
-  // what type of file this is
+  guards: RouteGuard[];
   type: RouteType;
-
-  // the dynamic params this route exposes
-  // e.g. /blog/[slug] -> ["slug"]
   params: string[];
 }
 
 export interface ServerRouteEntry {
   urlPattern: string;
   filePath: string;
+}
+
+export type RouteGuard = (...args: unknown[]) => unknown;
+
+interface RouteConfigShape {
+  guards?: RouteGuard[];
+}
+
+interface RouteModule {
+  config?: RouteConfigShape;
+  default?: unknown;
 }
 
 const LAYOUT_FILE = /^_layout\.(tsx|jsx)$/;
@@ -66,6 +62,14 @@ export function scanServerRoutes(appRoot: string): ServerRouteEntry[] {
   });
 }
 
+function resolveConfigPath(absolutePath: string): string {
+  const configPath = absolutePath
+    .replace(/\.(tsx|jsx)$/, ".config.$1")
+    .replace(".config.tsx", ".config.ts")
+    .replace(".config.jsx", ".config.js");
+  return fs.existsSync(configPath) ? configPath : absolutePath;
+}
+
 export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]> {
   const jiti = createScanJiti(appRoot);
   const routesDir = path.resolve(appRoot, "./src/routes");
@@ -78,20 +82,14 @@ export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]>
       const dir = path.dirname(file);
       const absolutePath = path.resolve(routesDir, file);
 
-      let layoutGuards: any[] = [];
-      const configPath = absolutePath
-        .replace(/\.(tsx|jsx)$/, ".config.$1")
-        .replace(".config.tsx", ".config.ts")
-        .replace(".config.jsx", ".config.js");
-
-      const moduleToScan = fs.existsSync(configPath) ? configPath : absolutePath;
+      let layoutGuards: RouteGuard[] = [];
 
       try {
-        const layoutModule = jiti.import(moduleToScan) as any;
+        const layoutModule = (await jiti.import(resolveConfigPath(absolutePath))) as RouteModule;
         if (layoutModule?.config?.guards) {
           layoutGuards = layoutModule.config.guards;
         }
-      } catch (err) {
+      } catch {
         console.warn(`[anaemia bundler warning]: Failed parsing config flags on layout: ${file}`);
       }
 
@@ -114,31 +112,22 @@ export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]>
     const absolutePagePath = path.resolve(routesDir, file);
     const { urlPattern, chunkName, params, type } = parseFilePath(file);
 
-    let pageGuards: any[] = [];
-
-    const pageConfigPath = absolutePagePath
-      .replace(/\.(tsx|jsx)$/, ".config.$1")
-      .replace(".config.tsx", ".config.ts")
-      .replace(".config.jsx", ".config.js");
-
-    const pageModuleToScan = fs.existsSync(pageConfigPath) ? pageConfigPath : absolutePagePath;
+    let pageGuards: RouteGuard[] = [];
 
     try {
-      const pageModule = (await jiti.import(pageModuleToScan)) as any;
+      const pageModule = (await jiti.import(resolveConfigPath(absolutePagePath))) as RouteModule;
       if (pageModule?.config?.guards) {
         pageGuards = pageModule.config.guards;
       }
-    } catch (err) {
+    } catch {
       // quietly ignore parsing problems for pure components lacking a config wrapper
     }
-
-    const layouts = resolveLayoutChain(dir, layoutMap);
 
     entries.push({
       urlPattern,
       filePath: absolutePagePath,
       chunkName,
-      layouts,
+      layouts: resolveLayoutChain(dir, layoutMap),
       guards: pageGuards,
       type,
       params,
@@ -195,11 +184,7 @@ function parseFilePath(file: string): {
   }
 
   const filteredParts = urlParts.filter((part) => part !== "" && part !== ".");
-  let urlPattern = "/" + filteredParts.join("/");
-
-  if (urlPattern === "") {
-    urlPattern = "/";
-  }
+  const urlPattern = filteredParts.length === 0 ? "/" : "/" + filteredParts.join("/");
 
   const chunkName = file
     .replace(/\.(tsx|jsx)$/, "")
@@ -219,7 +204,6 @@ function resolveLayoutChain(dir: string, layoutMap: Map<string, LayoutManifestEn
   while (true) {
     const layoutEntry = layoutMap.get(current);
     if (layoutEntry) layouts.unshift(layoutEntry);
-
     if (current === "." || current === "") break;
     current = path.dirname(current);
   }

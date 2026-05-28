@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Configuration } from "@rspack/core";
+import type { PluginItem } from "@babel/core";
 
 export interface AnaemiaPlugin {
   /**
@@ -21,8 +22,8 @@ export interface AnaemiaPlugin {
    * add additional babel plugins to the client transform pipeline.
    */
   babelPlugins?: {
-    client?: any[];
-    server?: any[];
+    client?: PluginItem[];
+    server?: PluginItem[];
   };
 
   /**

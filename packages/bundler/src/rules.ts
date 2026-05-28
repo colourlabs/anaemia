@@ -1,5 +1,4 @@
 import { createRequire } from "node:module";
-import path from "node:path";
 import type { AnaemiaConfig } from "@anaemia/core";
 
 const require = createRequire(import.meta.url);

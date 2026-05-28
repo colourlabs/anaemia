@@ -29,7 +29,7 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": "off", // let unused-imports handle it
+      "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "warn",

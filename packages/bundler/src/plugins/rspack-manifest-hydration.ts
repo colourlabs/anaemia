@@ -26,8 +26,8 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
           if (!chunk.name) continue;
 
           const files = Array.from(chunk.files);
-          const jsFile = files.find((f) => f.endsWith(".js"));
-          const cssFile = files.find((f) => f.endsWith(".css"));
+          const jsFile = files.find((f) => f.endsWith(".js") && !f.includes(".hot-update."));
+          const cssFile = files.find((f) => f.endsWith(".css") && !f.includes(".hot-update."));
 
           if (jsFile) {
             currentManifest.chunks[chunk.name] = {

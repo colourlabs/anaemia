@@ -32,7 +32,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "pnpm run build && node --test test/*.test.mjs"
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "test:integration": "pnpm run build && node --test test/integration/*.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
@@ -53,8 +54,7 @@
     }
   },
   "devDependencies": {
-    "@types/http-proxy": "^1.17.17",
     "@types/node": "^25.9.1",
-    "@types/ws": "^8.18.1"
+    "playwright": "^1.60.0"
   }
 }

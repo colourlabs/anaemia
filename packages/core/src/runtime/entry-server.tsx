@@ -48,6 +48,10 @@ if (isDev) {
       const contentType = response.headers.get("content-type");
       if (contentType) c.header("content-type", contentType);
 
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
+      c.header("Pragma", "no-cache");
+      c.header("Expires", "0");
+
       return c.body(await response.arrayBuffer());
     } catch (err) {
       return c.text("failed to connect to Rspack dev server asset bridge", 500);
@@ -99,7 +103,7 @@ app.post("/_rpc", async (c) => {
 
 app.use(async (c, next) => {
   const p = c.req.path;
-  if (isDev && (p.endsWith(".hot-update.js") || p.endsWith(".hot-update.json"))) {
+  if (isDev && p.includes(".hot-update.")) {
     const targetUrl = `${devServerUrl}${p}`;
     try {
       const response = await fetch(targetUrl);
@@ -110,9 +114,7 @@ app.use(async (c, next) => {
       
       c.header("Cache-Control", "no-cache, no-store, must-revalidate");
       
-      let bodyText = await response.text();
-
-      return c.body(bodyText);
+      return c.body(await response.arrayBuffer());
     } catch {
       return c.text("failed to fetch hot update", 500);
     }

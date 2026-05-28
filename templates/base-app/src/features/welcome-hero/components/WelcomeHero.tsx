@@ -8,7 +8,7 @@ interface WelcomeHeroProps {
   };
 }
 
-export function WelcomeHero(props: WelcomeHeroProps) {  
+export function WelcomeHero(props: WelcomeHeroProps) {
   return (
     <div class={styles.wrapper}>
       <h1 class={styles.title}>anaemia</h1>

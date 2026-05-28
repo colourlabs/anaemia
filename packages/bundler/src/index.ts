@@ -61,8 +61,6 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       chunkFilename: isDev ? "assets/[name].chunk.js" : "assets/[name].[contenthash:8].chunk.js",
       cssFilename: isDev ? "assets/[name].css" : "assets/[name].[contenthash:8].css",
       publicPath: "/",
-      uniqueName: "anaemia_base_app",
-      hotUpdateGlobal: "webpackHotUpdateanaemia_base_app",
     },
     performance: getPerformanceProfile(isDev),
     optimization: getClientOptimization(isDev),

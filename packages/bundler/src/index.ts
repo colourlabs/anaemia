@@ -3,6 +3,7 @@ import path from "path";
 import fs from "node:fs";
 import type { AnaemiaConfig } from "@anaemia/core/config";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
 import clientServerFnTransform from "./plugins/babel-transform-server.js";
 import serverHashInjector from "./plugins/babel-hash-injector-server.js";
@@ -18,6 +19,8 @@ import { createStyleRules, createBabelRule } from "./rules.js";
 import { getClientOptimization, getPerformanceProfile } from "./optimization.js";
 
 const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
@@ -92,6 +95,15 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         ...config.define?.client,
       }),
       new rspack.NormalModuleReplacementPlugin(/^node:/, (resource) => { resource.request = resource.request.replace(/^node:/, ""); }),
+      new rspack.NormalModuleReplacementPlugin(
+        /\.server\.(ts|tsx|js|jsx)$/,
+        (() => {
+          const srcPath = path.resolve(__dirname, "./runtime/empty-module.cjs");
+          if (fs.existsSync(srcPath)) return srcPath;
+          
+          return path.resolve(__dirname, "../src/runtime/empty-module.cjs");
+        })()
+      ),
       new AnaemiaManifestHydrationPlugin({ appRoot }),
     ],
     module: {

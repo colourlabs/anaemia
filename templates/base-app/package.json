@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "anaemia dev",
     "build": "anaemia build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "anaemia typecheck",
+    "start": "anaemia start"
   },
   "dependencies": {
     "@anaemia/core": "workspace:*",

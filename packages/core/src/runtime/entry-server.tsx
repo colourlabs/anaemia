@@ -68,7 +68,7 @@ if (isDev) {
   app.use(
     "/assets/*",
     serveStatic({
-      root: path.relative(process.cwd(), "./dist/client"),
+      root: path.resolve(process.cwd(), "./dist/client"),
     })
   );
 }
@@ -165,8 +165,8 @@ const loadManifestAndTemplate = async () => {
   sortedRoutes = null;
 };
 
-const normalizeAssetUrl = (url: string) => {
-  if (!url) return "";
+const normalizeAssetUrl = (url: unknown): string => {
+  if (!url || typeof url !== "string") return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return url.startsWith("/") ? url : `/${url}`;
 };
@@ -229,6 +229,8 @@ function matchRoute(manifest: any, reqPath: string): RouteMatch {
   };
 }
 
+// Look at your app.get("*") loop and update the processing logic:
+
 app.get("*", async (c) => {
   if (isDev) await loadManifestAndTemplate();
 
@@ -236,7 +238,7 @@ app.get("*", async (c) => {
   let manifest = memoizedManifest;
 
   if (!template || !manifest) {
-    return c.text("anaemia engine error: build distribution assets are missing or the Rspack dev server hasn't finished compiling yet.", 500);
+    return c.text("anaemia engine error: build assets are missing", 500);
   }
 
   const reqPath = c.req.path;
@@ -244,24 +246,16 @@ app.get("*", async (c) => {
   let statusCode: StatusCode = matchedStatus;
   const loaderArgs = { params, request: c.req.raw };
 
-  const store = ssrStorage.getStore();
+  // Re-verify and isolate our store reference map instance
+  const store = ssrStorage.getStore() || new Map<string, any>();
   let htmlPayload = "";
 
   if (targetPattern) {
     try {
-      const guardResult = await runGuards(targetPattern, {
-        params,
-        request: c.req.raw,
-        url: reqPath,
-      });
-
+      const guardResult = await runGuards(targetPattern, { params, request: c.req.raw, url: reqPath });
       if (guardResult) {
-        if ("redirect" in guardResult) {
-          return c.redirect(guardResult.redirect, (guardResult.status ?? 302) as RedirectStatusCode);
-        }
-        if ("status" in guardResult) {
-          statusCode = guardResult.status as StatusCode;
-        }
+        if ("redirect" in guardResult) return c.redirect(guardResult.redirect, (guardResult.status ?? 302) as RedirectStatusCode);
+        if ("status" in guardResult) statusCode = guardResult.status as StatusCode;
       }
     } catch (err) {
       console.error("[anaemia] guard threw unexpectedly:", err);
@@ -269,22 +263,28 @@ app.get("*", async (c) => {
     }
   }
 
+  // ─── THE ARCHITECTURE WRAPPER FIX ───
+  // We force both the awaitable loader execution AND the Solid rendering cycle 
+  // to run explicitly inside a fresh execution slice of the tracking store.
   try {
-    if (targetPattern && store) {
-      const executableLoader = serverLoaderRegistry.get(targetPattern);
-      if (executableLoader) {
-        const initialLoaderData = await executableLoader(loaderArgs);
-        store.set("__LOADER_DATA__", initialLoaderData);
+    htmlPayload = await ssrStorage.run(store, async () => {
+      if (targetPattern) {
+        const executableLoader = serverLoaderRegistry.get(targetPattern);
+        if (executableLoader) {
+          const initialLoaderData = await executableLoader(loaderArgs);
+          store.set("__LOADER_DATA__", initialLoaderData);
+        }
       }
-    }
 
-    await preloadActiveClientRoute(reqPath);
+      await preloadActiveClientRoute(reqPath);
 
-    htmlPayload = await renderToStringAsync(() => (
-      <Router url={reqPath}>
-        <App />
-      </Router>
-    ));
+      // Now when Solid calls $$executeClientRpc, the store is 100% active and tracked!
+      return await renderToStringAsync(() => (
+        <Router url={reqPath}>
+          <App />
+        </Router>
+      ));
+    });
   } catch (err: any) {
     statusCode = 500;
     console.error("[anaemia framework] runtime execution crash handled:", err);
@@ -292,19 +292,18 @@ app.get("*", async (c) => {
     const error500Pattern = manifest.errors?.["500"];
     const error500Loader = error500Pattern ? serverLoaderRegistry.get(error500Pattern) : null;
 
-    if (error500Loader && store) {
-      const runtimeContextPayload = {
-        message: err.message,
-        stack: isDev ? err.stack : undefined,
-      };
+    if (error500Loader) {
+      const runtimeContextPayload = { message: err.message, stack: isDev ? err.stack : undefined };
       store.set("__LOADER_DATA__", runtimeContextPayload);
 
       try {
-        htmlPayload = await renderToStringAsync(() => (
-          <Router url={error500Pattern}>
-            <App />
-          </Router>
-        ));
+        htmlPayload = await ssrStorage.run(store, async () => {
+          return await renderToStringAsync(() => (
+            <Router url={error500Pattern}>
+              <App />
+            </Router>
+          ));
+        });
       } catch {
         htmlPayload = `<h1>500 Internal Server Error</h1>`;
       }
@@ -313,26 +312,35 @@ app.get("*", async (c) => {
     }
   }
 
+  // ─── THE REMAINING INJECTIONS (Keep this exactly as you had it) ───
   let assetScripts = "";
   let assetStyles = "";
 
   if (manifest.chunks) {
-    const coreBundle = manifest.chunks["client"];
-    const routeBundle = manifest.chunks[activeChunk];
+    const processChunkAssets = (chunk: any) => {
+      if (!chunk) return;
+      if (chunk.js) {
+        const jsSpecs = Array.isArray(chunk.js) ? chunk.js : [chunk.js];
+        jsSpecs.forEach((jsFile: string) => {
+          assetScripts += `<script type="module" src="${normalizeAssetUrl(jsFile)}"></script>\n`;
+        });
+      }
+      if (chunk.css) {
+        const cssSpecs = Array.isArray(chunk.css) ? chunk.css : [chunk.css];
+        cssSpecs.forEach((cssFile: string) => {
+          assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(cssFile)}">\n`;
+        });
+      }
+    };
 
-    if (coreBundle?.js) {
-      assetScripts += `<script type="module" src="${normalizeAssetUrl(coreBundle.js)}"></script>\n`;
-    }
-    if (coreBundle?.css) {
-      assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(coreBundle.css)}">\n`;
-    }
-    if (routeBundle?.css && activeChunk !== "client") {
-      assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(routeBundle.css)}">\n`;
-    }
+    processChunkAssets(manifest.chunks["client"]);
+    if (manifest.chunks["commons"]) processChunkAssets(manifest.chunks["commons"]);
+    if (manifest.chunks["vendors"]) processChunkAssets(manifest.chunks["vendors"]);
+    if (activeChunk && activeChunk !== "client") processChunkAssets(manifest.chunks[activeChunk]);
   }
-
+  
   const hydrationScript = generateHydrationScript();
-  const rawStorePayload = store ? Object.fromEntries(store) : {};
+  const rawStorePayload = Object.fromEntries(store);
   
   const finalHydrationStatePayload = {
     __LOADER_DATA__: rawStorePayload.__LOADER_DATA__ || {},
@@ -352,7 +360,6 @@ app.get("*", async (c) => {
     : "";
 
   const combinedHeadInjections = `${devNoCacheTag}${assetStyles}${dataScript}${hydrationScript}`;
-
   const sanitizedPayload = htmlPayload.trim();
 
   let completeHtmlOutput = ENTRY_TAG_REGEX.test(template) 

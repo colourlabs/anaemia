@@ -22,24 +22,34 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
       try {
         const currentManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 
+        if (!currentManifest.chunks) {
+          currentManifest.chunks = {};
+        }
+
         for (const chunk of compilation.chunks) {
           if (!chunk.name) continue;
 
           const files = Array.from(chunk.files);
-          const jsFile = files.find((f) => f.endsWith(".js") && !f.includes(".hot-update."));
-          const cssFile = files.find((f) => f.endsWith(".css") && !f.includes(".hot-update."));
 
-          if (jsFile) {
+          const jsFiles = files.filter(
+            (f) => f.endsWith(".js") && !f.includes(".hot-update.") && !f.endsWith(".js.map")
+          );
+
+          const cssFiles = files.filter(
+            (f) => f.endsWith(".css") && !f.includes(".hot-update.") && !f.endsWith(".css.map")
+          );
+
+          if (jsFiles.length > 0 || cssFiles.length > 0) {
             currentManifest.chunks[chunk.name] = {
-              js: `/${jsFile}`,
-              ...(cssFile && { css: `/${cssFile}` }),
+              js: jsFiles.map((f) => `/${f}`),
+              css: cssFiles.map((f) => `/${f}`),
             };
           }
         }
 
         fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 2));
-      } catch (e) {
-        console.error("[anaemia compiler] failed updating route-manifest with assets:", e);
+      } catch (e: any) {
+        console.error("[anaemia compiler] failed updating route-manifest with assets:", e.message);
       }
     });
   }

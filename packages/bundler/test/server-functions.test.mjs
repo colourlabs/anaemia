@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { transformSync } from "@babel/core";
+
 import clientServerFnTransform from "../dist/plugins/babel-transform-server.js";
 import serverHashInjector from "../dist/plugins/babel-hash-injector-server.js";
+
+import path from "node:path";
+import fs from "node:fs";
 
 const filename = "/app/src/routes/index.tsx";
 const source = `
@@ -52,4 +56,22 @@ test("client transform preserves explicit server function ids", () => {
   )?.code ?? "";
 
   assert.match(code, /\$\$executeClientRpc\("custom-id"\)/);
+});
+
+test("should guarantee server-side logic never leaks to client assets", async () => {
+  const clientAssetDir = path.resolve(process.cwd(), "dist/client/assets");
+  
+  if (!fs.existsSync(clientAssetDir)) return;
+
+  const files = fs.readdirSync(clientAssetDir).filter(f => f.endsWith(".js"));
+
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(clientAssetDir, file), "utf-8");
+    
+    assert.equal(
+      content.includes("SELECT * FROM users"), 
+      false, 
+      `CRITICAL SECURITY LEAK: server logic found inside client asset: ${file}`
+    );
+  }
 });

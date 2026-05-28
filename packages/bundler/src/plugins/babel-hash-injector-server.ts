@@ -1,4 +1,4 @@
-import { createServerFunctionId } from "./server-function-id.js";
+import { createServerFunctionId } from "../server-function-id.js";
 
 export default function serverHashInjector({ types: t }: any) {
   return {

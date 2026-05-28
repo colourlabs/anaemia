@@ -30,7 +30,7 @@ export function WelcomeHero(props: WelcomeHeroProps) {
       </div>
 
       <div class={styles.footer}>
-        edit <code class={styles.inlineCode}>src/features/welcome/components/welcome-hero/WelcomeHero.tsx</code> to begin.
+        edit <code class={styles.inlineCode}>src/features/welcome-hero/components/WelcomeHero.tsx</code> to begin.
       </div>
     </div>
   );

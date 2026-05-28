@@ -1,68 +1,93 @@
-import { createContext, useContext, type Accessor, createResource, createComponent, Resource } from "solid-js";
-import { ssrStorage } from "./context.js";
+import {
+  createContext,
+  useContext,
+  createResource,
+  createComponent,
+  type JSX
+} from "solid-js";
 import { isServer } from "solid-js/web";
+import { useParams, useLocation, type Params } from "@solidjs/router";
+import type { Location } from "@solidjs/router";
+import { ssrStorage } from "./context.js";
+import { createRouteRequest } from "./route-request.js";
 
-const RouteDataContext = createContext<Resource<any>>();
+type RouteDataControllerProps<TParams extends Params = Params> = {
+  loader: (args: {
+    params: TParams;
+    location: Location;
+    request: Request;
+  }) => any | Promise<any>;
+  children: JSX.Element;
+};
 
-let clientHydrationData: any = undefined;
-let isFirstHydrationPass = true;
+type RouteDataContextValue<T = any> = {
+  data: () => T;
+};
 
-function getHydrationData() {
-  if (isServer) return undefined;
-  if (!isFirstHydrationPass) return undefined;
+const RouteDataContext = createContext<RouteDataContextValue>();
+let hasReadClientHydrationData = false;
 
-  const script = document.getElementById("__ANAEMIA_DATA__");
-  if (script) {
-    try {
-      const parsed = JSON.parse(script.textContent || "{}");
-      clientHydrationData = parsed.__LOADER_DATA__;
-    } catch (e) {
-      console.error("[anaemia] failed parsing hydration data tag:", e);
-    }
+function readSSRData() {
+  if (isServer) {
+    return ssrStorage.getStore()?.get("__LOADER_DATA__");
   }
-  isFirstHydrationPass = false;
-  return clientHydrationData;
+
+  if (hasReadClientHydrationData) return undefined;
+  hasReadClientHydrationData = true;
+
+  const el = document.getElementById("__ANAEMIA_DATA__");
+  if (!el?.textContent) return undefined;
+
+  try {
+    return JSON.parse(el.textContent).__LOADER_DATA__;
+  } catch {
+    return undefined;
+  }
 }
 
-export function RouteDataController(props: { loader: any; children: any }) {
-  let initialValue: any = undefined;
+export function RouteDataController<TParams extends Params = Params>(
+  props: RouteDataControllerProps<TParams>
+) {
+  const params = useParams<TParams>();
+  const location = useLocation();
 
-  if (isServer) {
-    const store = ssrStorage.getStore();
-    initialValue = store?.get("__LOADER_DATA__");
-  } else {
-    initialValue = getHydrationData();
-  }
+  const ssrData = readSSRData();
 
-  const [data] = createResource(
-    () => props.loader,
-    async (currentLoader) => {
-      if (initialValue !== undefined) {
-        const cachedValue = initialValue;
-        initialValue = undefined;
-        return cachedValue;
+  const [resource] = createResource(
+    () => location.pathname,
+    () => {
+      if (isServer && ssrData !== undefined) {
+        return ssrData;
       }
-      if (typeof currentLoader === "function") {
-        return await currentLoader();
-      }
-      return null;
+
+      return props.loader({
+        params,
+        location,
+        request: createRouteRequest(location.pathname)
+      });
+    },
+    {
+      initialValue: ssrData,
+      ssrLoadFrom: "initial"
     }
   );
 
   return createComponent(RouteDataContext.Provider, {
-    get value() {
-      return data;
+    value: {
+      data: resource
     },
     get children() {
       return props.children;
-    },
+    }
   });
 }
 
-export function useRouteData<T = any>(): Accessor<T | undefined> {
-  const context = useContext(RouteDataContext);
-  if (!context) {
-    throw new Error("[anaemia] useRouteData must be consumed inside an Anaemia Route scope layout context.");
+export function useRouteData<T = any>(): () => T {
+  const ctx = useContext(RouteDataContext);
+
+  if (!ctx) {
+    throw new Error("useRouteData must be used inside RouteDataController");
   }
-  return context;
+
+  return ctx.data;
 }

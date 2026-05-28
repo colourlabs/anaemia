@@ -1,4 +1,4 @@
-import { defineConfig } from "@anaemia/core";
+import { defineConfig } from "@anaemia/core/config";
 import { anaemiaLightningCssPlugin } from "@anaemia/core/plugins";
 
 export default defineConfig({

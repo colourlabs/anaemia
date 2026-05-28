@@ -3,13 +3,14 @@ import {
   runOnServer, 
   type InferServerData 
 } from "@anaemia/core";
-import { WelcomeHero } from "@features/welcome/welcome-hero/WelcomeHero.jsx";
+
+import { WelcomeHero } from "@features/welcome-hero/components/WelcomeHero.jsx";
 
 const fetchHomeStats = runOnServer(async () => {
   return {
     status: "online",
     clientName: "client",
-    timestamp: new Date().toLocaleTimeString(),
+    timestamp: new Date().toISOString(),
   };
 });
 

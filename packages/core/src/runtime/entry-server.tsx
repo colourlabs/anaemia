@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { serve, upgradeWebSocket } from "@hono/node-server";
+import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { compress } from "hono/compress";
 import { renderToStringAsync, generateHydrationScript } from "solid-js/web";
@@ -7,14 +7,13 @@ import { Router } from "@solidjs/router";
 import { ssrStorage, serverFunctionsRegistry } from "./context.js";
 import fs from "node:fs";
 import path from "path";
-import { WebSocket as NodeWS, WebSocketServer } from "ws";
 import type { StatusCode, RedirectStatusCode } from "hono/utils/http-status";
 
 // @ts-ignore - mapped by Rspack
 import App from "anaemia-user-app";
 
 // @ts-ignore - mapped by Rspack
-import { serverLoaderRegistry, serverGuardRegistry } from "anaemia-user-app";
+import { preloadActiveClientRoute, serverLoaderRegistry, serverGuardRegistry } from "anaemia-user-app";
 
 // @ts-ignore - mapped by Rspack
 import { registerServerRoutes } from "__anaemia_server_routes__";
@@ -40,48 +39,7 @@ app.use("*", async (c, next) => {
 });
 
 if (isDev) {
-  app.get(
-    "/_anaemia_hmr",
-    upgradeWebSocket(() => {
-      let rspackSocket: NodeWS | null = null;
-    
-      const closeRspack = () => {
-        if (!rspackSocket) return;
-        if (rspackSocket.readyState === NodeWS.OPEN || rspackSocket.readyState === NodeWS.CONNECTING) {
-          rspackSocket.once("open", () => rspackSocket?.close());
-          if (rspackSocket.readyState === NodeWS.OPEN) rspackSocket.close();
-        }
-        rspackSocket = null;
-      };
-    
-      return {
-        onOpen(event, ws) {
-          rspackSocket = new NodeWS(`ws://localhost:${devPort}/rspack-hmr`);
-    
-          rspackSocket.on("error", (err) => {
-            console.warn("[anaemia hmr] rspack socket error:", err.message);
-            closeRspack();
-          });
-    
-          rspackSocket.on("message", (data) => {
-            const flattened = Array.isArray(data) ? Buffer.concat(data) : data;
-            if (Buffer.isBuffer(flattened)) ws.send(flattened.toString("utf-8"));
-            else ws.send(String(flattened));
-          });
-        },
-        onMessage(event, ws) {
-          if (rspackSocket?.readyState === NodeWS.OPEN) rspackSocket.send(event.data);
-        },
-        onClose() {
-          closeRspack();
-        },
-      };
-    })
-  );
-}
-
-if (isDev) {
-  app.get("/assets/*", async (c) => {
+  const devAssetProxy = async (c: any) => {
     const targetUrl = `${devServerUrl}${c.req.path}`;
     try {
       const response = await fetch(targetUrl);
@@ -94,16 +52,21 @@ if (isDev) {
     } catch (err) {
       return c.text("failed to connect to Rspack dev server asset bridge", 500);
     }
-  });
+  };
+
+  app.get("/assets/*", devAssetProxy);
 } else {
   app.use("/assets/*", async (c, next) => {
     await next();
     if (c.res.ok) c.res.headers.set("Cache-Control", "public, max-age=31536000, immutable");
   });
-  
-  app.use("/assets/*", serveStatic({
-    root: path.relative(process.cwd(), "./dist/client"),
-  }));
+
+  app.use(
+    "/assets/*",
+    serveStatic({
+      root: path.relative(process.cwd(), "./dist/client"),
+    })
+  );
 }
 
 app.post("/_rpc", async (c) => {
@@ -133,6 +96,30 @@ app.post("/_rpc", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 });
+
+app.use(async (c, next) => {
+  const p = c.req.path;
+  if (isDev && (p.endsWith(".hot-update.js") || p.endsWith(".hot-update.json"))) {
+    const targetUrl = `${devServerUrl}${p}`;
+    try {
+      const response = await fetch(targetUrl);
+      if (!response.ok) return c.text("hot update not found", 404);
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType) c.header("content-type", contentType);
+      
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
+      
+      let bodyText = await response.text();
+
+      return c.body(bodyText);
+    } catch {
+      return c.text("failed to fetch hot update", 500);
+    }
+  }
+  await next();
+});
+
 
 registerServerRoutes(app);
 
@@ -189,16 +176,9 @@ type RouteMatch = {
   params: Record<string, string>;
 };
 
-type GuardFn = (ctx: { params: Record<string, string>; request: Request; url: string }) => 
-  | void | undefined
-  | { redirect: string; status?: 301 | 302 | 307 | 308 }
-  | { status: number; body?: string }
-  | Promise<void | undefined | { redirect: string; status?: number } | { status: number; body?: string }>;
+type GuardFn = (ctx: { params: Record<string, string>; request: Request; url: string }) => void | undefined | { redirect: string; status?: 301 | 302 | 307 | 308 } | { status: number; body?: string } | Promise<void | undefined | { redirect: string; status?: number } | { status: number; body?: string }>;
 
-async function runGuards(
-  pattern: string,
-  ctx: { params: Record<string, string>; request: Request; url: string }
-) {
+async function runGuards(pattern: string, ctx: { params: Record<string, string>; request: Request; url: string }) {
   const chain: (() => Promise<GuardFn[]>)[] = serverGuardRegistry.get(pattern) ?? [];
   for (const loadGuards of chain) {
     const guards: GuardFn[] = await loadGuards();
@@ -226,9 +206,7 @@ function matchRoute(manifest: any, reqPath: string): RouteMatch {
   }
 
   for (const route of sortedRoutes) {
-    const regexStr = route.urlPattern
-      .replace(/:([a-zA-Z0-9_-]+)/g, "(?<$1>[^/]+)")
-      .replace(/\*([a-zA-Z0-9_-]*)/g, "(?<catchall>.*)");
+    const regexStr = route.urlPattern.replace(/:([a-zA-Z0-9_-]+)/g, "(?<$1>[^/]+)").replace(/\*([a-zA-Z0-9_-]*)/g, "(?<catchall>.*)");
 
     const match = new RegExp(`^${regexStr}$`).exec(reqPath);
     if (match) {
@@ -298,6 +276,8 @@ app.get("*", async (c) => {
       }
     }
 
+    await preloadActiveClientRoute(reqPath);
+
     htmlPayload = await renderToStringAsync(() => (
       <Router url={reqPath}>
         <App />
@@ -319,7 +299,9 @@ app.get("*", async (c) => {
 
       try {
         htmlPayload = await renderToStringAsync(() => (
-          <Router url={error500Pattern}><App /></Router>
+          <Router url={error500Pattern}>
+            <App />
+          </Router>
         ));
       } catch {
         htmlPayload = `<h1>500 Internal Server Error</h1>`;
@@ -348,44 +330,55 @@ app.get("*", async (c) => {
   }
 
   const hydrationScript = generateHydrationScript();
+  const rawStorePayload = store ? Object.fromEntries(store) : {};
+  
+  const finalHydrationStatePayload = {
+    __LOADER_DATA__: rawStorePayload.__LOADER_DATA__ || {},
+    __SERVER_FUNCTION_DATA__: rawStorePayload.__SERVER_FUNCTION_DATA__ || {}
+  };
 
-  const serializedMap = store ? Object.fromEntries(store) : {};
-  delete serializedMap.honoContext;
-
-  const serializedData = JSON.stringify(serializedMap).replace(/&/g, "\\u0026").replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\//g, "\\u002f");
+  const serializedData = JSON.stringify(finalHydrationStatePayload)
+    .replace(/&/g, "\\u0026")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\//g, "\\u002f");
+    
   const dataScript = `<script id="__ANAEMIA_DATA__" type="application/json">${serializedData}</script>\n`;
+
+  const devNoCacheTag = isDev
+    ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n`
+    : "";
+
+  const combinedHeadInjections = `${devNoCacheTag}${assetStyles}${dataScript}${hydrationScript}`;
 
   const sanitizedPayload = htmlPayload.trim();
 
-  let completeHtmlOutput = ENTRY_TAG_REGEX.test(template) ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`) : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
+  let completeHtmlOutput = ENTRY_TAG_REGEX.test(template) 
+    ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`) 
+    : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
 
-  if (completeHtmlOutput.includes("</head>")) {
-    completeHtmlOutput = completeHtmlOutput.replace("</head>", `${assetStyles}${dataScript}</head>`);
-  } else {
-    completeHtmlOutput = completeHtmlOutput.replace("</body>", `${dataScript}</body>`);
-  }
-
-  completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${hydrationScript}`);
+  completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${combinedHeadInjections}`);
   completeHtmlOutput = completeHtmlOutput.replace("</body>", `${assetScripts}</body>`);
+
+  if (isDev) {
+    c.header("Cache-Control", "no-cache, no-store, must-revalidate");
+    c.header("Pragma", "no-cache");
+    c.header("Expires", "0");
+  }
 
   c.status(statusCode);
   return c.html(completeHtmlOutput);
 });
 
-loadManifestAndTemplate().then(() => {
-  if (isDev) {
-    const wss = new WebSocketServer({ noServer: true });
-    serve({ fetch: app.fetch, websocket: { server: wss }, port }, (info) => {
-      console.log(`[anaemia framework] server live at http://localhost:${info.port}`);
-    });
-  } else {
+loadManifestAndTemplate()
+  .then(() => {
     serve({ fetch: app.fetch, port }, (info) => {
       console.log(`[anaemia framework] server live at http://localhost:${info.port}`);
     });
-  }
-}).catch((err) => {
-  console.error("[anaemia] failed to initialize:", err);
-  process.exit(1);
-});
+  })
+  .catch((err) => {
+    console.error("[anaemia] failed to initialize:", err);
+    process.exit(1);
+  });
 
 export default app;

@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@anaemia/core": "workspace:*",

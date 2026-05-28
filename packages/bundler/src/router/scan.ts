@@ -1,8 +1,15 @@
 import { glob } from "glob";
 import path from "path";
 import { createJiti } from "jiti";
+import fs from "node:fs";
+import { getAliases } from "../aliases.js";
 
-const jiti = createJiti(import.meta.url, { interopDefault: true });
+export function createScanJiti(appRoot: string) {
+  return createJiti(import.meta.url, {
+    interopDefault: true,
+    alias: getAliases(appRoot),
+  });
+}
 
 export type RouteType = "page" | "layout" | "catch-all";
 
@@ -59,7 +66,8 @@ export function scanServerRoutes(appRoot: string): ServerRouteEntry[] {
   });
 }
 
-export function scanRoutes(appRoot: string): RouteManifestEntry[] {
+export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]> {
+  const jiti = createScanJiti(appRoot);
   const routesDir = path.resolve(appRoot, "./src/routes");
   const files = glob.sync("**/*.{tsx,jsx}", { cwd: routesDir, posix: true });
 
@@ -69,11 +77,17 @@ export function scanRoutes(appRoot: string): RouteManifestEntry[] {
     if (LAYOUT_FILE.test(filename)) {
       const dir = path.dirname(file);
       const absolutePath = path.resolve(routesDir, file);
-      
+
       let layoutGuards: any[] = [];
+      const configPath = absolutePath
+        .replace(/\.(tsx|jsx)$/, ".config.$1")
+        .replace(".config.tsx", ".config.ts")
+        .replace(".config.jsx", ".config.js");
+
+      const moduleToScan = fs.existsSync(configPath) ? configPath : absolutePath;
+
       try {
-        // safe evaluation of layout exports without breaking on DOM or global targets
-        const layoutModule = jiti.import(absolutePath) as any;
+        const layoutModule = jiti.import(moduleToScan) as any;
         if (layoutModule?.config?.guards) {
           layoutGuards = layoutModule.config.guards;
         }
@@ -83,7 +97,7 @@ export function scanRoutes(appRoot: string): RouteManifestEntry[] {
 
       layoutMap.set(dir, {
         filePath: absolutePath,
-        guards: layoutGuards
+        guards: layoutGuards,
       });
     }
   }
@@ -95,13 +109,22 @@ export function scanRoutes(appRoot: string): RouteManifestEntry[] {
     const dir = path.dirname(file);
 
     if (LAYOUT_FILE.test(filename)) continue;
+    if (filename.includes(".config.")) continue;
 
     const absolutePagePath = path.resolve(routesDir, file);
     const { urlPattern, chunkName, params, type } = parseFilePath(file);
 
     let pageGuards: any[] = [];
+
+    const pageConfigPath = absolutePagePath
+      .replace(/\.(tsx|jsx)$/, ".config.$1")
+      .replace(".config.tsx", ".config.ts")
+      .replace(".config.jsx", ".config.js");
+
+    const pageModuleToScan = fs.existsSync(pageConfigPath) ? pageConfigPath : absolutePagePath;
+
     try {
-      const pageModule = jiti.import(absolutePagePath) as any;
+      const pageModule = (await jiti.import(pageModuleToScan)) as any;
       if (pageModule?.config?.guards) {
         pageGuards = pageModule.config.guards;
       }

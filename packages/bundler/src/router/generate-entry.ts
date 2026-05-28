@@ -80,11 +80,17 @@ function renderTree(nodes: TreeNode[], indent = 6): string {
           }
         }
 
-        if (indent > 6 && routePath.startsWith("/") && routePath !== "/") {
+        if (indent > 6 && routePath === "/") {
+          routePath = "";
+        } else if (indent > 6 && routePath.startsWith("/") && routePath !== "/") {
           routePath = routePath.slice(1);
         }
 
-        return `${pad}<Route path="${routePath}" component={Route${node.routeIdx}} load={Route${node.routeIdx}Loader} />`;
+        if (routePath === "") {
+          return `${pad}<Route component={Route${node.routeIdx}Wrapped} />`;
+        }
+        
+        return `${pad}<Route path="${routePath}" component={Route${node.routeIdx}Wrapped} />`;
       }
 
       let layoutPath = (node as any).relativePath;
@@ -93,6 +99,17 @@ function renderTree(nodes: TreeNode[], indent = 6): string {
       return [`${pad}<Route path="${layoutPath}" component={Layout${node.layoutIdx}}>`, inner, `${pad}</Route>`].join("\n");
     })
     .join("\n");
+}
+
+function buildPreloadMapString(routes: RouteManifestEntry[], allLayouts: Map<string, number>): string {
+  const mapLines = routes.map((r, i) => {
+    const layoutTokens = r.layouts.map((l) => `Layout${allLayouts.get(l.filePath)}`);
+    const pageToken = `Route${i}`;
+    const tokensArrayString = `[${[...layoutTokens, pageToken].join(", ")}]`;
+    return `  "${r.urlPattern}": ${tokensArrayString}`;
+  });
+
+  return `const chunkPreloadRegistry = {\n${mapLines.join(",\n")}\n};`;
 }
 
 export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[]): string {
@@ -122,15 +139,22 @@ export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[
         .replace(/[^a-zA-Z0-9-_\[\]]/g, "-")
         .toLowerCase();
 
-      const guardSources = [...r.layouts.map((l) => l.filePath), r.filePath].map((fp) => `() => import("${fp.replace(/\\/g, "/")}").then(m => m?.config?.guards ?? [])`).join(",\n    ");
+      const guardSources = [...r.layouts.map((l) => l.filePath), r.filePath]
+        .map((fp) => {
+          const configPath = fp.replace(/\.(tsx|jsx)$/, ".config.ts");
+          const guardPath = fs.existsSync(configPath) ? configPath : fp.replace(/\.(jsx)$/, ".config.js");
+          const resolvedGuardPath = fs.existsSync(guardPath) ? guardPath : fp;
+          return `() => import("${resolvedGuardPath.replace(/\\/g, "/")}").then(m => m?.config?.guards ?? [])`;
+        })
+        .join(",\n    ");
 
       return `
 const Route${i} = lazy(() => import(/* webpackChunkName: "${chunkName}" */ "${r.filePath.replace(/\\/g, "/")}"));
 const Route${i}Loader = async (args) => {
-  const guardSources = [
+  const _guardSources = [
     ${guardSources}
   ];
-  for (const loadGuards of guardSources) {
+  for (const loadGuards of _guardSources) {
     const guards = await loadGuards();
     for (const guard of guards) {
       const result = await guard({ params: args.params, request: args.request, url: args.location?.pathname ?? "" });
@@ -146,7 +170,11 @@ const Route${i}Loader = async (args) => {
     return mod.loader ? mod.loader(args) : null;
   });
 };
-`.trim();
+const Route${i}Wrapped = (props) => (
+  <RouteDataController loader={Route${i}Loader}>
+    <Route${i} {...props} />
+  </RouteDataController>
+);`.trim();
     })
     .join("\n");
 
@@ -155,7 +183,7 @@ const Route${i}Loader = async (args) => {
       const relativeToRoutes = path.relative(routesDir, file);
       const chunkName = ("layout-" + relativeToRoutes.replace(/\.[jt]sx?$/, "").replace(/[^a-zA-Z0-9-_\[\]]/g, "-")).toLowerCase();
 
-      return `const Layout${i} = lazy(() => import(/* webpackChunkName: "${chunkName}" */ "${file.replace(/\\/g, "/")}"));`;
+      return `import Layout${i} from "${file.replace(/\\/g, "/")}";`;
     })
     .join("\n");
 
@@ -180,7 +208,18 @@ const Route${i}Loader = async (args) => {
   const hasRootWrapper = fs.existsSync(rootWrapperPath);
 
   const rootImport = hasRootWrapper ? `import RootWrapper from "../src/root.tsx";` : ``;
-  const finalJsx = hasRootWrapper ? `    <Route component={RootWrapper}>\n${routeJsx}\n    </Route>` : `    <>\n${routeJsx}\n    </>`;
+
+  const rootWrapperCode = hasRootWrapper
+    ? `const RootWrapperComponent = (props) => (
+  <RootWrapper {...props} />
+);`
+    : ``;
+
+  const finalJsx = hasRootWrapper
+    ? `    <Route component={RootWrapperComponent}>
+${routeJsx}
+    </Route>`
+    : routeJsx;
 
   const registryEntries = routes
     .map((r) => {
@@ -193,26 +232,59 @@ const Route${i}Loader = async (args) => {
 
   const guardRegistryEntries = conventionalRoutes
     .map((r) => {
-      // ordered: root layout -> nested layout -> page
       const sources = [...r.layouts.map((l) => l.filePath), r.filePath];
 
-      const loaders = sources.map((fp) => `async () => { const m = await import("${fp.replace(/\\/g, "/")}"); return m?.config?.guards ?? []; }`).join(",\n    ");
+      const loaders = sources
+        .map((fp) => {
+          const configPath = fp.replace(/\.(tsx|jsx)$/, ".config.ts");
+          const guardPath = fs.existsSync(configPath) ? configPath : fp.replace(/\.jsx$/, ".config.js");
+          const resolvedGuardPath = fs.existsSync(guardPath) ? guardPath : fp;
+          return `async () => { const m = await import("${resolvedGuardPath.replace(/\\/g, "/")}"); return m?.config?.guards ?? []; }`;
+        })
+        .join(",\n    ");
 
       return `  ["${r.urlPattern}", [\n    ${loaders}\n  ]]`;
     })
     .join(",\n");
 
+  const chunkPreloadRegistryCode = buildPreloadMapString(conventionalRoutes, allLayouts);
+
+  const preloadFnCode = `
+export async function preloadActiveClientRoute(pathname: string) {
+  // Simple match logic against parameters or route patterns
+  const pattern = Object.keys(chunkPreloadRegistry).find(p => {
+    if (p === pathname) return true;
+    const regexStr = p.replace(/:([a-zA-Z0-9_-]+)/g, "([^/]+)").replace(/\\*([a-zA-Z0-9_-]*)/g, "(.*)");
+    return new RegExp("^" + regexStr + "$").test(pathname);
+  });
+  
+  const componentsToPreload = pattern ? chunkPreloadRegistry[pattern] : [];
+  const preloads = componentsToPreload
+    .filter(c => typeof c.preload === "function")
+    .map(c => c.preload());
+  
+  await Promise.all(preloads);
+}
+`.trim();
+
   const code = `
 // @ts-nocheck
 // auto-generated by anaemia - do not edit!!
-import { lazy, Suspense } from "solid-js";
+import { lazy } from "solid-js";
 import { Route } from "@solidjs/router";
+import { RouteDataController } from "@anaemia/core";
 
 ${rootImport}
+
+${rootWrapperCode}
 
 ${routeImports}
 
 ${layoutImports}
+
+${chunkPreloadRegistryCode}
+
+${preloadFnCode}
 
 export const serverLoaderRegistry = new Map([\n${registryEntries}\n]);
 
@@ -220,9 +292,7 @@ export const serverGuardRegistry = new Map([\n${guardRegistryEntries}\n]);
 
 export default function AnaemiaRoutes() {
   return (
-    <Suspense fallback={<div>Loading Layout Stack...</div>}>
 ${finalJsx}
-    </Suspense>
   );
 }
 `.trimStart();

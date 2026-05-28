@@ -5,6 +5,7 @@
   "description": "a high-performance SolidJS SSR framework built for large projects",
   "scripts": {
     "dev": "pnpm --filter \"@anaemia/cli\" dev",
+    "test": "pnpm -r --if-present test",
     "typecheck": "tsc --noEmit",
     "clean": "pnpm -r exec rm -rf dist .rspack node_modules"
   },

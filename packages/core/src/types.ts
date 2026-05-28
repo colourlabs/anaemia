@@ -29,4 +29,4 @@ export type GuardContext = {
 
 export type GuardResult = void | undefined | { redirect: string; status?: 301 | 302 | 307 | 308 } | { status: 401 | 403 | 404 | 500; body?: string };
 
-type GuardFn = (ctx: { params: Record<string, string>; request: Request; url: string }) => void | undefined | { redirect: string; status?: RedirectStatusCode } | { status: number; body?: string } | Promise<void | undefined | { redirect: string; status?: RedirectStatusCode } | { status: number; body?: string }>;
+export type GuardFn = (ctx: { params: Record<string, string>; request: Request; url: string }) => void | undefined | { redirect: string; status?: RedirectStatusCode } | { status: number; body?: string } | Promise<void | undefined | { redirect: string; status?: RedirectStatusCode } | { status: number; body?: string }>;

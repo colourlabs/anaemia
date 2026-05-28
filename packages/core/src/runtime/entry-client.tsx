@@ -1,20 +1,34 @@
-import { hydrate } from "solid-js/web";
+import { hydrate, render } from "solid-js/web";
 import { Router } from "@solidjs/router";
 
-// @ts-ignore - mapped by Rspack
-import App from "anaemia-user-app";
+// @ts-ignore
+import App, { preloadActiveClientRoute } from "anaemia-user-app";
 
-const targetElement = document.querySelector("[anaemia-entry]");
+const mountTarget = document.querySelector(
+  "[anaemia-entry]"
+) as HTMLElement | null;
 
-if (targetElement) {
-  hydrate(
+if (!mountTarget) {
+  throw new Error("[anaemia] missing mount target");
+}
+
+const root = mountTarget;
+
+async function start() {
+  await preloadActiveClientRoute(window.location.pathname);
+
+  const mount = root.hasChildNodes()
+    ? hydrate
+    : render;
+
+  mount(
     () => (
       <Router>
         <App />
       </Router>
     ),
-    targetElement
+    root
   );
-} else {
-  console.error("[anaemia framework error]: could not find an element containing the 'anaemia-entry' attribute inside your index.html template. hydration aborted.");
 }
+
+start();

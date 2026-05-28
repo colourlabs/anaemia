@@ -14,6 +14,9 @@ import prompts from "prompts";
 import { scaffoldFeature, generateSharedComponent, scaffoldPage, scaffoldHook } from "./scaffold.js";
 import fsExtra from "fs-extra";
 import { transform } from "sucrase";
+import { WebSocketServer } from "ws";
+import { WebSocket as NodeWS } from "ws";
+import http from "node:http";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,10 +68,35 @@ cli.command("dev", "launch local development environment").action(async () => {
   const userConfig = await loadUserConfig(appRoot);
   const targetPort = userConfig.port || 3000;
 
-  const [clientConfig, serverConfig] = getRspackConfig(appRoot, userConfig);
+  const [clientConfig, serverConfig] = await getRspackConfig(appRoot, userConfig);
 
   const clientCompiler = rspack(clientConfig);
   const devServer = new RspackDevServer(clientConfig.devServer || {}, clientCompiler);
+
+  const bridgeServer = http.createServer();
+  const wss = new WebSocketServer({ server: bridgeServer });
+
+  wss.on("connection", (clientWs) => {
+    const rspackSocket = new NodeWS(`ws://localhost:${targetPort + 1}/ws`);
+  
+    rspackSocket.on("message", (data) => {
+      const flattened = Array.isArray(data) ? Buffer.concat(data) : data;
+      if (Buffer.isBuffer(flattened)) clientWs.send(flattened.toString("utf-8"));
+      else clientWs.send(String(flattened));
+    });
+  
+    rspackSocket.on("error", (err) => {
+      console.warn("[anaemia hmr] rspack socket error:", err.message);
+    });
+  
+    clientWs.on("message", (data) => {
+      if (rspackSocket.readyState === NodeWS.OPEN) rspackSocket.send(data);
+    });
+  
+    clientWs.on("close", () => {
+      if (rspackSocket.readyState === NodeWS.OPEN) rspackSocket.close();
+    });
+  });
 
   let serverProcess: ChildProcess | null = null;
 
@@ -78,10 +106,12 @@ cli.command("dev", "launch local development environment").action(async () => {
       serverProcess = null;
     }
 
-    serverProcess = spawn("node", [path.resolve(appRoot, "./dist/server/index.js")], {
-      stdio: "inherit",
-      env: { ...process.env, NODE_ENV: "development", PORT: String(targetPort) },
-    });
+    setTimeout(() => {
+      serverProcess = spawn("node", [path.resolve(appRoot, "./dist/server/index.js")], {
+        stdio: "inherit",
+        env: { ...process.env, NODE_ENV: "development", PORT: String(targetPort), RSPACK_DEV_PORT: String(targetPort + 1) },
+      });
+    }, 200);
   };
 
   const cleanup = async () => {
@@ -89,12 +119,13 @@ cli.command("dev", "launch local development environment").action(async () => {
       serverProcess.kill("SIGTERM");
       serverProcess = null;
     }
-
+    bridgeServer.close();
+    serverCompiler?.close(() => {});
     if (devServer) {
       await devServer.stop();
     }
     process.exit(0);
-  };
+  };  
 
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);
@@ -109,6 +140,10 @@ cli.command("dev", "launch local development environment").action(async () => {
     process.exit(1);
   }
 
+  bridgeServer.listen(targetPort + 2, () => {
+    logger.info(`HMR bridge running on port ${targetPort + 2}`);
+  });
+
   const serverCompiler = rspack(serverConfig);
 
   serverCompiler.watch({}, (err, stats) => {
@@ -118,14 +153,7 @@ cli.command("dev", "launch local development environment").action(async () => {
     }
 
     if (stats?.hasErrors()) {
-      console.error(
-        stats.toString({
-          colors: true,
-          all: false,
-          errors: true,
-          warnings: true,
-        })
-      );
+      console.error(stats.toString({ colors: true, all: false, errors: true, warnings: true }));
       logger.error("server compilation encountered build script errors.");
       return;
     }
@@ -157,7 +185,7 @@ cli.command("build", "compile production-ready optimization bundles").action(asy
   const appRoot = process.cwd();
 
   const userConfig = await loadUserConfig(appRoot);
-  const configs = getRspackConfig(appRoot, userConfig);
+  const configs = await getRspackConfig(appRoot, userConfig);
   const compiler = rspack(configs);
 
   logger.compiler("packaging production optimization bundles...");
@@ -179,7 +207,7 @@ cli.command("routes", "print the scanned route manifest").action(async () => {
 
   logger.info("scanned route architecture:");
   console.table(
-    routes.map((r) => ({
+    (await routes).map((r) => ({
       pattern: r.urlPattern,
       chunk: r.chunkName,
       layouts: r.layouts.length,

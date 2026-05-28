@@ -90,6 +90,9 @@ importers:
       sucrase:
         specifier: ^3.35.1
         version: 3.35.1
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
     devDependencies:
       '@rspack/dev-server':
         specifier: ^2.0.1
@@ -106,6 +109,9 @@ importers:
       '@types/prompts':
         specifier: ^2.4.9
         version: 2.4.9
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       fs-extra:
         specifier: ^11.3.5
         version: 11.3.5
@@ -130,9 +136,6 @@ importers:
       solid-js:
         specifier: ^1.9.13
         version: 1.9.13
-      ws:
-        specifier: ^8.21.0
-        version: 8.21.0
     devDependencies:
       '@types/http-proxy':
         specifier: ^1.17.17

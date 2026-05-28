@@ -17,5 +17,5 @@
       "@features/*": ["./src/features/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "./anaemia.config.ts"]
 }

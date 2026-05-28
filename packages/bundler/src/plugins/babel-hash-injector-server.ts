@@ -1,3 +1,5 @@
+import { createServerFunctionId } from "./server-function-id.js";
+
 export default function serverHashInjector({ types: t }: any) {
   return {
     name: "anaemia-server-hash-injector",
@@ -5,7 +7,7 @@ export default function serverHashInjector({ types: t }: any) {
       CallExpression(path: any, state: any) {
         if (path.node.callee.name === "runOnServer") {
           const filename = state.file.opts.filename || "unknown";
-          const functionHash = Buffer.from(`${filename}:${path.node.start}`).toString("base64url");
+          const functionHash = createServerFunctionId(filename, path.node.start);
 
           if (path.node.arguments.length === 1) {
             path.node.arguments.push(t.stringLiteral(functionHash));

@@ -26,3 +26,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+!packages/core/dist
+!packages/bundler/dist
+!packages/cli/dist

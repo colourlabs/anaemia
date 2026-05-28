@@ -1,0 +1,1 @@
+{"version":3,"file":"babel-transform-client.d.ts","sourceRoot":"","sources":["../../src/plugins/babel-transform-client.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,aAAa,CAAC;AAC7C,OAAO,KAAK,UAAU,MAAM,cAAc,CAAC;AAE3C,MAAM,CAAC,OAAO,UAAU,wBAAwB,CAAC,EAC/C,KAAK,EAAE,CAAC,EACT,EAAE;IACD,KAAK,EAAE,OAAO,UAAU,CAAA;CACzB,GAAG,SAAS,CA4EZ"}

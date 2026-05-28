@@ -8,7 +8,7 @@ a work in progress high-performance SolidJS SSR framework built for large codeba
 
 - bojanSocial's web frontend is comprised with tons of components (100+) and over 100,000 lines of code. This is an issue with Vite's ES module based system due to fact it has to load tons of JavaScript for the initial page load. We wanted to move away from the issues of SPA while benefiting with hybrid rendering so we can focus on app speed and SEO 
 
-- We abuse CSS modules (a ton) - every page on bojanSocial uses CSS modules with SCSS so we needed first class support for it. Our entire styling is custom and complex to acive the look we want.
+- We abuse CSS modules (a ton) - every page on bojanSocial uses CSS modules with SCSS so we needed first class support for it. Our entire styling is custom and complex to achieve the look we want.
 
 - We are terrible at making maintainable codebases and remembering how to structure them without turning into a mess, so we get the computer and our past selves to it for us ;) 
 

@@ -314,10 +314,14 @@ cli
       fs.mkdirSync(targetPath, { recursive: true });
     }
 
-    const templatePath = path.resolve(__dirname, "../../../templates/base-app");
+    let templatePath = path.resolve(__dirname, "../../../templates/base-app");
 
     if (!fs.existsSync(templatePath)) {
-      logger.error("internal framework error: base-app template folder could not be found.");
+      templatePath = path.resolve(__dirname, "../templates/base-app");
+    }
+    
+    if (!fs.existsSync(templatePath)) {
+      logger.error(`internal framework error: base-app template folder could not be found at: ${templatePath}`);
       process.exit(1);
     }
 

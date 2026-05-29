@@ -25,6 +25,9 @@ const __dirname = path.dirname(__filename);
 export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
+  const hasSrc = fs.existsSync(path.resolve(coreRuntimeDir, "./src/runtime"));
+  const runtimeDir = hasSrc ? path.resolve(coreRuntimeDir, "./src/runtime") : path.resolve(coreRuntimeDir, "./dist/runtime");
+  const runtimeExt = hasSrc ? "tsx" : "jsx";
 
   const routes = await scanRoutes(appRoot);
   const serverRoutes = scanServerRoutes(appRoot);
@@ -56,7 +59,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     devtool: isDev ? "eval-cheap-module-source-map" : false,
     cache: isDev,
     entry: {
-      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(coreRuntimeDir, "./src/runtime/entry-client.tsx")],
+      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, `entry-client.${runtimeExt}`)],
     },
     output: {
       path: path.resolve(appRoot, "./dist/client"),
@@ -94,13 +97,15 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         __ANAEMIA_RUNTIME_CONFIG__: JSON.stringify({ port: config.port, assets: config.assets, styles: config.styles }),
         ...config.define?.client,
       }),
-      new rspack.NormalModuleReplacementPlugin(/^node:/, (resource) => { resource.request = resource.request.replace(/^node:/, ""); }),
+      new rspack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      }),
       new rspack.NormalModuleReplacementPlugin(
         /\.server\.(ts|tsx|js|jsx)$/,
         (() => {
           const srcPath = path.resolve(__dirname, "./runtime/empty-module.cjs");
           if (fs.existsSync(srcPath)) return srcPath;
-          
+
           return path.resolve(__dirname, "../src/runtime/empty-module.cjs");
         })()
       ),
@@ -117,7 +122,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         {
           ...createBabelRule({ isServer: false, isDev, plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins] }),
           include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
-        }
+        },
       ],
     },
   };
@@ -126,7 +131,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     name: "server",
     context: appRoot,
     target: "node",
-    entry: { server: path.resolve(coreRuntimeDir, "./src/runtime/entry-server.tsx") },
+    entry: { server: path.resolve(runtimeDir, `entry-server.${runtimeExt}`) },
     output: { path: path.resolve(appRoot, "./dist/server"), filename: "index.js", module: true, chunkFormat: "module", chunkLoading: "import" },
     optimization: { nodeEnv: false },
     resolve: {
@@ -135,8 +140,8 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       alias: {
         ...sharedResolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
-        "@anaemia/core/config": path.resolve(coreRuntimeDir, "./src/config.ts"),
-        "@anaemia/core": path.resolve(coreRuntimeDir, "./src/index.ts"),
+        "@anaemia/core/config": hasSrc ? path.resolve(coreRuntimeDir, "./src/config.ts") : path.resolve(coreRuntimeDir, "./dist/config.js"),
+        "@anaemia/core": hasSrc ? path.resolve(coreRuntimeDir, "./src/index.ts") : path.resolve(coreRuntimeDir, "./dist/index.js"),
         __anaemia_user_config__: path.resolve(appRoot, "./anaemia.config.ts"),
         __anaemia_server_routes__: serverRoutesFile,
       },
@@ -153,7 +158,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         {
           ...createBabelRule({ isServer: true, isDev, plugins: [...extraServerBabelPlugins] }),
           include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
-        }
+        },
       ],
     },
   };

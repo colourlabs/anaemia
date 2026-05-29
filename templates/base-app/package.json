@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Starter template for Anaemia applications",
+  "description": "starter template for Anaemia applications",
   "scripts": {
     "dev": "anaemia dev",
     "build": "anaemia build",

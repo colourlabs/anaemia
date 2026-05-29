@@ -320,8 +320,8 @@ cli
         } else {
           execSync(`npx degit colourlabs/anaemia/templates/base-app "${targetPath}"`, { stdio: "ignore" });
         }
-      } catch {
-        logger.error("Could not source template workspace assets locally or from network registry nodes.");
+      } catch (err) {
+        logger.error("could not source template workspace assets locally or from network registry nodes. " + err);
         process.exit(1);
       }
     }

@@ -5,6 +5,7 @@ import { toCamelCase, toKebabCase, toPascalCase } from "./utils/casing.js";
 export function scaffoldFeature(rawName: string, appRoot: string) {
   const folderName = toKebabCase(rawName);
   const componentName = toPascalCase(rawName);
+  const camelName = toCamelCase(rawName);
 
   const isTypeScript = fs.existsSync(path.join(appRoot, "tsconfig.json"));
   const ext = isTypeScript ? "tsx" : "jsx";
@@ -17,116 +18,111 @@ export function scaffoldFeature(rawName: string, appRoot: string) {
   directories.forEach((dir) => fs.mkdirSync(dir, { recursive: true }));
 
   const componentContent = isTypeScript
-    ? `import { children, JSX } from "solid-js";
+    ? `import type { JSX } from "solid-js";
 import styles from "./${componentName}.module.scss";
+
+// data flows in from the route loader via props.
+// in your route file:
+//
+//   import { ${camelName}Action } from "@features/${folderName}/index.js";
+//
+//   export const loader = async () => await ${camelName}Action(undefined);
+//
+//   export default function Page() {
+//     const data = useRouteData();
+//     return <${componentName} data={data()} />;
+//   }
 
 interface ${componentName}Props {
   children?: JSX.Element;
+  data?: unknown;
 }
 
 export function ${componentName}(props: ${componentName}Props) {
-  const resolved = children(() => props.children);
-
   return (
     <div class={styles.wrapper}>
-      Welcome to ${componentName}
-      {resolved()}
+      {props.children}
     </div>
   );
 }
 `
-    : `import { children } from "solid-js";
-import styles from "./${componentName}.module.scss";
+    : `import styles from "./${componentName}.module.scss";
 
 export function ${componentName}(props) {
-  const resolved = children(() => props.children);
-
   return (
     <div class={styles.wrapper}>
-      Welcome to ${componentName}
-      {resolved()}
+      {props.children}
     </div>
   );
 }
 `;
 
   const actionsContent = isTypeScript
-    ? `import { runOnServer } from "@anaemia/core";
+    ? `// raw server-side logic — DO NOT import UI code here
+// these functions run exclusively on the server
 
-export const ${toCamelCase(componentName)}Action = runOnServer(async (input: unknown) => {
+export async function ${camelName}Query(input: unknown) {
   // TODO: implement server-side logic
   return { ok: true };
-});
+}
 `
-    : `import { runOnServer } from "@anaemia/core";
+    : `// raw server-side logic — DO NOT import UI code here
+// these functions run exclusively on the server
 
-export const ${toCamelCase(componentName)}Action = runOnServer(async (input) => {
+export async function ${camelName}Query(input) {
   // TODO: implement server-side logic
   return { ok: true };
-});
+}
 `;
 
   const hookContent = isTypeScript
-    ? `import { createSignal } from "solid-js";
-import { ${toCamelCase(componentName)}Action } from "../server/actions";
+    ? `import { createServerResource } from "@anaemia/core";
+import { ${camelName}Action } from "../index.js";
 
 export function use${componentName}() {
-  const [data, setData] = createSignal<unknown>(null);
-  const [error, setError] = createSignal<string | null>(null);
-  const [loading, setLoading] = createSignal(false);
+  const [data] = createServerResource(() => undefined, ${camelName}Action);
 
-  const execute = async (input: unknown) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await ${toCamelCase(componentName)}Action(input);
-      setData(result);
-      return result;
-    } catch (err: any) {
-      setError(err.message ?? "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { data, error, loading, execute };
+  return { data };
 }
 `
-    : `import { createSignal } from "solid-js";
-import { ${toCamelCase(componentName)}Action } from "../server/actions";
+    : `import { createServerResource } from "@anaemia/core";
+import { ${camelName}Action } from "../index.js";
 
 export function use${componentName}() {
-  const [data, setData] = createSignal(null);
-  const [error, setError] = createSignal(null);
-  const [loading, setLoading] = createSignal(false);
+  const [data] = createServerResource(() => undefined, ${camelName}Action);
 
-  const execute = async (input) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await ${toCamelCase(componentName)}Action(input);
-      setData(result);
-      return result;
-    } catch (err) {
-      setError(err.message ?? "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { data, error, loading, execute };
+  return { data };
 }
 `;
 
-  const indexContent = `export { ${componentName} } from "./components/${componentName}";
-export { use${componentName} } from "./hooks/use${componentName}";
+  const indexContent = isTypeScript
+    ? `import { runOnServer } from "@anaemia/core";
+import { ${camelName}Query } from "./server/actions.server.js";
+
+// runOnServer wrappers — import these in your route loaders
+export const ${camelName}Action = runOnServer(async (input: unknown) => {
+  return await ${camelName}Query(input);
+});
+
+export { ${componentName} } from "./components/${componentName}.js";
+export { use${componentName} } from "./hooks/use${componentName}.js";
+`
+    : `import { runOnServer } from "@anaemia/core";
+import { ${camelName}Query } from "./server/actions.server.js";
+
+export const ${camelName}Action = runOnServer(async (input) => {
+  return await ${camelName}Query(input);
+});
+
+export { ${componentName} } from "./components/${componentName}.js";
+export { use${componentName} } from "./hooks/use${componentName}.js";
 `;
 
   fs.writeFileSync(path.join(featureDir, `components/${componentName}.${ext}`), componentContent, "utf8");
 
   fs.writeFileSync(path.join(featureDir, `components/${componentName}.module.scss`), `.wrapper {\n  display: block;\n}\n`, "utf8");
 
-  fs.writeFileSync(path.join(featureDir, `server/actions.${scriptExt}`), actionsContent, "utf8");
+  fs.writeFileSync(path.join(featureDir, `server/actions.server.${scriptExt}`), actionsContent, "utf8");
 
   fs.writeFileSync(path.join(featureDir, `hooks/use${componentName}.${scriptExt}`), hookContent, "utf8");
 
@@ -138,8 +134,10 @@ export { use${componentName} } from "./hooks/use${componentName}";
   console.log(`      │   ├── ${componentName}.${ext}`);
   console.log(`      │   └── ${componentName}.module.scss`);
   console.log(`      ├── hooks/`);
-  console.log(`      └── server/`);
-  console.log(`          └── actions.${scriptExt}\n`);
+  console.log(`      │   └── use${componentName}.${scriptExt}`);
+  console.log(`      ├── server/`);
+  console.log(`      │   └── actions.server.${scriptExt}`);
+  console.log(`      └── index.${scriptExt}\n`);
 }
 
 interface GeneratorOptions {

@@ -13,7 +13,7 @@
     "@anaemia/bundler": "workspace:*",
     "@anaemia/core": "workspace:*",
     "@rspack/core": "^2.0.5",
-    "@rspack/dev-server": "^2.0.2",
+    "@rspack/dev-server": "2.0.1",
     "cac": "^7.0.0",
     "cross-spawn": "^7.0.6",
     "jiti": "^2.7.0",

@@ -102,8 +102,8 @@ importers:
         specifier: ^2.0.5
         version: 2.0.5
       '@rspack/dev-server':
-        specifier: ^2.0.2
-        version: 2.0.2(@rspack/core@2.0.5)
+        specifier: ^2.0.1
+        version: 2.0.1(@rspack/core@2.0.5)
       cac:
         specifier: ^7.0.0
         version: 7.0.0
@@ -828,8 +828,8 @@ packages:
       '@rspack/core':
         optional: true
 
-  '@rspack/dev-server@2.0.2':
-    resolution: {integrity: sha512-gE1FdeXtTX92t/5TIzOUxKV90UuyNfMT3PlSqrkGz7E0I3SbvnmLB0ewIJUEBA/up22m55rRxEG6jK9yajYCAw==}
+  '@rspack/dev-server@2.0.1':
+    resolution: {integrity: sha512-N5sIdU9v6WhwPH6Ek8QCj4IMvGd8jA3ZW1NMAyHP1ezzKIr2/idcNV2zX5vbC6FJvOLRLww0rFjfKA+z4tshDA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@rspack/core': ^2.0.5
@@ -2163,7 +2163,7 @@ snapshots:
     optionalDependencies:
       '@rspack/core': 2.0.5
 
-  '@rspack/dev-server@2.0.2(@rspack/core@2.0.5)':
+  '@rspack/dev-server@2.0.1(@rspack/core@2.0.5)':
     dependencies:
       '@rspack/core': 2.0.5
       '@rspack/dev-middleware': 2.0.1(@rspack/core@2.0.5)

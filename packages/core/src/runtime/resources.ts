@@ -28,7 +28,8 @@ export function createServerResource<Source, Return>(
       const fnData = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionData | undefined;
       const fnCache = fnData?.[serverFn.id];
       if (fnCache) {
-        const key = JSON.stringify([source()]);
+        const sourceValue = source();
+        const key = sourceValue === undefined ? JSON.stringify([]) : JSON.stringify([sourceValue]);
         if (fnCache[key] !== undefined) ssrInitialValue = fnCache[key] as Return;
       }
     }
@@ -49,7 +50,8 @@ export function createServerResource<Source, Return>(
         if (cached !== undefined) return Promise.resolve(cached);
       }
     }
-    return serverFn(s);
+
+    return s === undefined ? (serverFn as () => Promise<Return>)() : serverFn(s);
   };
 
   (wrappedFetcher as typeof serverFn).id = serverFn.id;

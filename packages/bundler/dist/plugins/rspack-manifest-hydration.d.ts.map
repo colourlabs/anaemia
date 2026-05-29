@@ -1,1 +1,0 @@
-{"version":3,"file":"rspack-manifest-hydration.d.ts","sourceRoot":"","sources":["../../src/plugins/rspack-manifest-hydration.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,oBAAoB,EAAE,QAAQ,EAAE,MAAM,cAAc,CAAC;AAEnE,UAAU,sBAAsB;IAC9B,OAAO,EAAE,MAAM,CAAC;CACjB;AAED,qBAAa,8BAA+B,YAAW,oBAAoB;IACzE,OAAO,CAAC,OAAO,CAAS;gBAEZ,OAAO,EAAE,sBAAsB;IAI3C,KAAK,CAAC,QAAQ,EAAE,QAAQ;CAyCzB"}

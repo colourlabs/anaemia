@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { RouteManifestEntry } from "./scan.js";
 
-export interface BuildManifest {
+interface BuildManifest {
   routes: RouteManifestEntry[];
   // filled in after rspack build - maps chunkName to hashed filename
   chunks: Record<string, { js: string; css?: string }>;

@@ -9,39 +9,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
 import fs from "node:fs";
-import { ChildProcess } from "node:child_process";
+import { ChildProcess, execSync } from "node:child_process";
 import prompts from "prompts";
 import { scaffoldFeature, generateSharedComponent, scaffoldPage, scaffoldHook } from "./scaffold.js";
-import fsExtra from "fs-extra";
 import { transform } from "sucrase";
 import { WebSocketServer } from "ws";
 import { WebSocket as NodeWS } from "ws";
+import logger from "./logger.js";
 import http from "node:http";
 import { AnaemiaConfig } from "@anaemia/core/config";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const logger = {
-  prefix: pc.bold(pc.red("[anaemia]")),
-
-  info(msg: string) {
-    console.log(`${this.prefix} ${pc.cyan(msg)}`);
-  },
-  success(msg: string) {
-    console.log(`${this.prefix} ${pc.green(msg)}`);
-  },
-  warn(msg: string) {
-    console.log(`${this.prefix} ${pc.yellow(msg)}`);
-  },
-  error(msg: string, detail?: unknown) {
-    console.error(`${this.prefix} ${pc.red(msg)}`);
-    if (detail) console.error(detail);
-  },
-  compiler(msg: string) {
-    console.log(`${pc.bold(pc.magenta("[compiler]"))} ${msg}`);
-  },
-};
 
 const cli = cac("anaemia");
 
@@ -257,7 +236,6 @@ cli
       }
 
       if (type === "hook") {
-        // supports both "hook:useAuth" and "hook:auth/usePermissions"
         scaffoldHook(normalizedName, appRoot);
         return;
       }
@@ -311,32 +289,43 @@ cli
         }
 
         logger.warn(`purging existing files inside ${targetDir}...`);
-        fsExtra.emptyDirSync(targetPath);
+        fs.rmSync(targetPath, { recursive: true, force: true });
+        fs.mkdirSync(targetPath, { recursive: true });
       }
     } else {
       fs.mkdirSync(targetPath, { recursive: true });
     }
 
-    let templatePath = path.resolve(__dirname, "../../../templates/base-app");
-
+    let templatePath = path.resolve(__dirname, "../templates/template-base");
     if (!fs.existsSync(templatePath)) {
       templatePath = path.resolve(__dirname, "../templates/base-app");
     }
-    
-    if (!fs.existsSync(templatePath)) {
-      logger.error(`internal framework error: base-app template folder could not be found at: ${templatePath}`);
-      process.exit(1);
+
+    if (fs.existsSync(templatePath)) {
+      logger.info("unpacking localized scaffolding architecture layout structures...");
+      fs.cpSync(templatePath, targetPath, {
+        recursive: true,
+        filter: (src) => !["node_modules", "dist", ".anaemia", ".rspack"].includes(path.basename(src)),
+      });
+    } else {
+      logger.warn("local templates missing. fetching remote registry packages over the network...");
+      const userAgent = process.env.npm_config_user_agent || "";
+      let packageManager = "npm";
+      if (userAgent.includes("pnpm")) packageManager = "pnpm";
+      else if (userAgent.includes("yarn")) packageManager = "yarn";
+
+      try {
+        if (packageManager === "pnpm") {
+          execSync(`pnpm dlx dlx-unzip @anaemia/template-base "${targetPath}"`, { stdio: "ignore" });
+        } else {
+          execSync(`npx degit colourlabs/anaemia/templates/base-app "${targetPath}"`, { stdio: "ignore" });
+        }
+      } catch {
+        logger.error("Could not source template workspace assets locally or from network registry nodes.");
+        process.exit(1);
+      }
     }
-
-    logger.info(`scaffolding templates into ${pc.bold(targetPath)}...`);
-
-    fsExtra.copySync(templatePath, targetPath, {
-      filter: (src) => {
-        const base = path.basename(src);
-        return !["node_modules", "dist", ".anaemia", ".rspack"].includes(base);
-      },
-    });
-
+    
     const removeGitKeepFiles = (dir: string) => {
       const files = fs.readdirSync(dir);
       for (const file of files) {
@@ -396,7 +385,7 @@ cli
     const pkgJsonPath = path.join(targetPath, "package.json");
     if (fs.existsSync(pkgJsonPath)) {
       try {
-        const pkg = fsExtra.readJsonSync(pkgJsonPath);
+        const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
         pkg.name = path.basename(targetPath);
 
         if (response.variant === "js") {
@@ -411,7 +400,7 @@ cli
           }
         }
 
-        fsExtra.writeJsonSync(pkgJsonPath, pkg, { spaces: 2 });
+        fs.writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, 2), "utf8");
       } catch (err) {
         logger.error("failed rewriting package.json manifest structures:", err);
       }

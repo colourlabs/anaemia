@@ -1,9 +1,8 @@
 {
-  "name": "anaemia-base-app",
+  "name": "@anaemia/template-base",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "description": "starter template for anaemia applications",
+  "description": "starter template for Anaemia applications",
   "scripts": {
     "dev": "anaemia dev",
     "build": "anaemia build",
@@ -11,14 +10,14 @@
     "start": "anaemia start"
   },
   "dependencies": {
-    "@anaemia/core": "workspace:*",
+    "@anaemia/core": "^0.1.5",
     "@solidjs/router": "^0.16.1",
     "hono": "^4.12.23",
     "lightningcss": "^1.32.0",
     "solid-js": "^1.9.13"
   },
   "devDependencies": {
-    "@anaemia/cli": "workspace:*",
+    "@anaemia/cli": "^0.1.5",
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.0",
     "@typescript-eslint/eslint-plugin": "^8.60.0",

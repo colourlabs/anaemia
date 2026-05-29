@@ -316,7 +316,7 @@ cli
 
       try {
         if (packageManager === "pnpm") {
-          execSync(`pnpm dlx dlx-unzip @anaemia/template-base "${targetPath}"`, { stdio: "ignore" });
+          execSync(`pnpm dlx degit colourlabs/anaemia/templates/base-app "${targetPath}"`, { stdio: "ignore" });
         } else {
           execSync(`npx degit colourlabs/anaemia/templates/base-app "${targetPath}"`, { stdio: "ignore" });
         }

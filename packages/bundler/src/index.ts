@@ -129,6 +129,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
 
   let serverConfig: Configuration = {
     name: "server",
+    devtool: isDev ? "source-map" : false,
     context: appRoot,
     target: "node",
     entry: { server: path.resolve(runtimeDir, `entry-server.${runtimeExt}`) },

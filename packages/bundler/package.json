@@ -15,7 +15,7 @@
     "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@anaemia/core": "workspace:*",
+    "@anaemia/core": "^0.1.2",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@rspack/core": "^2.0.5",

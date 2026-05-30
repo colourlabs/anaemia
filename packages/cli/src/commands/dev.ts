@@ -58,19 +58,15 @@ export function register(cli: CAC) {
       }
 
       setTimeout(() => {
-        serverProcess = spawn(
-          "node",
-          ["--enable-source-maps", path.resolve(appRoot, "./dist/server/index.js")],
-          {
-            stdio: "inherit",
-            env: {
-              ...process.env,
-              NODE_ENV: "development",
-              PORT: String(targetPort),
-              RSPACK_DEV_PORT: String(targetPort + 1),
-            },
-          }
-        );
+        serverProcess = spawn("node", ["--enable-source-maps", path.resolve(appRoot, "./dist/server/index.js")], {
+          stdio: "inherit",
+          env: {
+            ...process.env,
+            NODE_ENV: "development",
+            PORT: String(targetPort),
+            RSPACK_DEV_PORT: String(targetPort + 1),
+          },
+        });
       }, 200);
     };
 

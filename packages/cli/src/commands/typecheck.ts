@@ -7,4 +7,4 @@ export function register(cli: CAC) {
     const result = spawn.sync("tsc", ["--noEmit"], { stdio: "inherit", cwd: appRoot });
     if (result.status !== 0) process.exit(result.status ?? 1);
   });
-};
+}

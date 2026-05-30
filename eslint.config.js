@@ -7,7 +7,7 @@ import tsParser from "@typescript-eslint/parser";
 export default [
   {
     // ingore stubs
-    ignores: ["dist/**", ".anaemia/**", "**/dist/**", "pnpm-lock.yaml", "packages/core/src/context.browser.ts"],
+    ignores: ["dist/**", "templates/**", ".anaemia/**", "**/dist/**", "pnpm-lock.yaml", "packages/core/src/context.browser.ts"],
   },
 
   js.configs.recommended,

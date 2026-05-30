@@ -96,6 +96,12 @@ function rollback() {
   }
 }
 
+console.log("\n=== checking environment ===");
+if (!process.env.NPM_TOKEN) {
+  console.error("NPM_TOKEN is not set. run: NPM_TOKEN=your_token node scripts/release.js");
+  process.exit(1);
+}
+
 try {
   console.log("\n=== checking git state ===");
   const dirty = execSync("git status --porcelain").toString().trim();

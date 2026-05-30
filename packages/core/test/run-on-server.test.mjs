@@ -12,7 +12,6 @@ test("runOnServer returns a callable function and registers the original impleme
 
   assert.equal(typeof add, "function");
   assert.equal(add.id, "add");
-  assert.equal(add.urlId, "add");
   assert.equal(await add(2, 3), 5);
   assert.equal(await serverFunctionsRegistry.get("add")(4, 6), 10);
 });

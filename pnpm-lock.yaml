@@ -81,6 +81,10 @@ importers:
       solid-refresh:
         specifier: ^0.7.8
         version: 0.7.8(solid-js@1.9.13)
+    devDependencies:
+      '@types/babel__core':
+        specifier: ^7.20.5
+        version: 7.20.5
 
   packages/cli:
     dependencies:

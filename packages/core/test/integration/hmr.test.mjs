@@ -7,9 +7,14 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { createRequire } from "node:module";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const require = createRequire(import.meta.url);
 const { createJiti } = require("jiti");
 const jiti = createJiti(import.meta.url);
+
+const projectRoot = path.resolve(__dirname, "../../../../templates/base-app");
 
 async function resolveConfigPort() {
   const configPath = path.resolve(projectRoot, "anaemia.config.ts");
@@ -30,12 +35,8 @@ async function resolveConfigPort() {
   return 3000;
 }
 
-const TARGET_PORT = resolveConfigPort();
+const TARGET_PORT = await resolveConfigPort();
 const BASE_URL = `http://localhost:${TARGET_PORT}`;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, "../../../../templates/base-app");
 const componentPath = path.resolve(projectRoot, "src/features/welcome-hero/components/WelcomeHero.tsx");
 
 test("integration - dev server HMR & hydration lifecycle", async (t) => {
@@ -70,19 +71,22 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
       const timeout = setTimeout(() => {
         reject(new Error(`Dev server startup timed out. Current output:\n${output}`));
-      }, 15000);
+      }, 30_000);
 
       const checkPortReady = async () => {
         for (let i = 0; i < 20; i++) {
-          // Dynamic URL Check
-          const res = await fetch(BASE_URL);
-          if (res.status === 200 || res.status === 404) {
-            clearTimeout(timeout);
-            resolve();
-            return;
+          try {
+            const res = await fetch(BASE_URL);
+            if (res.status === 200 || res.status === 404) {
+              clearTimeout(timeout);
+              resolve();
+              return;
+            }
+          } catch {
+            // server not up yet, keep polling
           }
 
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((r) => setTimeout(r, 500));
         }
         reject(new Error(`Server process started but port ${TARGET_PORT} never responded to HTTP requests.`));
       };

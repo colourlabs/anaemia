@@ -8,6 +8,8 @@ export const ssrStorage = new AsyncLocalStorage<Map<string, unknown>>();
 
 export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { id: string } {
   const hashId = id || "";
+  serverFunctionsRegistry.set(hashId, backendFn);
+
   const rpcProxy = async function (...args: unknown[]) {
     const result = await backendFn(...args);
     const store = ssrStorage.getStore();

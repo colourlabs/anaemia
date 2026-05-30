@@ -12,7 +12,7 @@ export async function fetchTemplate(targetPath: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const extract = tar.extract({
       cwd: targetPath,
-      strip: 2,
+      strip: 3,
       filter: (p: string) => p.startsWith("anaemia-main/templates/base-app"),
     });
 

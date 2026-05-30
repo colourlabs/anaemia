@@ -113,11 +113,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         styleRules.client,
         {
           ...createBabelRule({ isServer: false, isDev, plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins] }),
-          exclude: /[\\/]node_modules[\\/]/,
-        },
-        {
-          ...createBabelRule({ isServer: false, isDev, plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins] }),
-          include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
+          exclude: /[\\/]node_modules[\\/](?!@anaemia[\\/]core|@solidjs[\\/]router)/,
         },
       ],
     },
@@ -150,11 +146,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         styleRules.server,
         {
           ...createBabelRule({ isServer: true, isDev, plugins: [serverHashInjector, ...extraServerBabelPlugins] }),
-          exclude: /[\\/]node_modules[\\/]/,
-        },
-        {
-          ...createBabelRule({ isServer: true, isDev, plugins: [...extraServerBabelPlugins] }),
-          include: /[\\/]node_modules[\\/]@solidjs[\\/]router/,
+          exclude: /[\\/]node_modules[\\/](?!@anaemia[\\/]core|@solidjs[\\/]router)/,
         },
       ],
     },

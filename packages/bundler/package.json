@@ -1,6 +1,6 @@
 {
   "name": "@anaemia/bundler",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
@@ -15,7 +15,7 @@
     "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@anaemia/core": "^0.3.0",
+    "@anaemia/core": "^0.3.1",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@rspack/core": "^2.0.5",

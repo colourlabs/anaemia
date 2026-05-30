@@ -7,6 +7,10 @@ import { generateSharedComponent, scaffoldFeature, scaffoldHook, scaffoldPage } 
 import { execSync } from "node:child_process";
 import prompts from "prompts";
 import { transform } from "sucrase";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function register(cli: CAC) {
   cli

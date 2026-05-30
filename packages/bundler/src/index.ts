@@ -113,7 +113,11 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         styleRules.client,
         {
           ...createBabelRule({ isServer: false, isDev, plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins] }),
-          exclude: /[\\/]node_modules[\\/](?!@anaemia[\\/]core|@solidjs[\\/]router)/,
+          exclude: (modulePath: string) => {
+            if (modulePath.includes("@anaemia") && modulePath.includes("core")) return false;
+            if (modulePath.includes("@solidjs") && modulePath.includes("router")) return false;
+            return modulePath.includes("node_modules");
+          },
         },
       ],
     },
@@ -146,7 +150,11 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         styleRules.server,
         {
           ...createBabelRule({ isServer: true, isDev, plugins: [serverHashInjector, ...extraServerBabelPlugins] }),
-          exclude: /[\\/]node_modules[\\/](?!@anaemia[\\/]core|@solidjs[\\/]router)/,
+          exclude: (modulePath: string) => {
+            if (modulePath.includes("@anaemia") && modulePath.includes("core")) return false;
+            if (modulePath.includes("@solidjs") && modulePath.includes("router")) return false;
+            return modulePath.includes("node_modules");
+          },
         },
       ],
     },

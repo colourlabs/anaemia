@@ -5,15 +5,17 @@
   "version": "1.0.0",
   "description": "a high-performance SolidJS SSR framework built for large projects",
   "scripts": {
-    "dev": "pnpm --filter \"@anaemia/cli\" dev",
-    "test": "pnpm -r --if-present test && pnpm -r --if-present test:integration",
+    "build": "pnpm --filter @anaemia/* --filter !@anaemia/template-base build",
     "typecheck": "tsc --noEmit",
-    "clean": "pnpm -r exec rm -rf dist .rspack node_modules",
-    "build": "pnpm --filter \"@anaemia/*\" --filter \"!@anaemia/template-base\" build",
-    "prepublishOnly": "pnpm run build",
+    "test": "pnpm -r --if-present test && pnpm -r --if-present test:integration",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "check:unused": "knip"
+    "clean": "pnpm -r exec rm -rf dist .rspack node_modules",
+    "check:unused": "knip",
+    "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js --patch",
+    "release:dry": "node scripts/release.js --dry-run",
+    "release:patch:dry": "node scripts/release.js --patch --dry-run"
   },
   "keywords": [
     "ssr",

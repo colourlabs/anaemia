@@ -1,18 +1,16 @@
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import readline from "node:readline";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
-const PACKAGES = [
-  "packages/core",
-  "packages/bundler",
-  "packages/cli",
-];
+const PACKAGES = ["packages/core", "packages/bundler", "packages/cli"];
 
 const DRY_RUN = process.argv.includes("--dry-run");
+const PATCH = process.argv.includes("--patch");
 
 function run(cmd, cwd = root) {
   console.log(`\n$ ${cmd}${DRY_RUN ? " (dry run)" : ""}`);
@@ -27,16 +25,31 @@ function writePkg(pkgPath, pkg) {
   fs.writeFileSync(path.join(pkgPath, "package.json"), JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 }
 
+function confirm(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(`\n${question} (y/n): `, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === "y");
+    });
+  });
+}
+
+function runCheck(cmd) {
+  console.log(`\n$ ${cmd}`);
+  const [bin, ...args] = cmd.split(" ");
+  const result = spawnSync(bin, args, { stdio: "inherit", cwd: root, shell: true });
+  return result.status === 0;
+}
+
 const snapshots = PACKAGES.map((p) => {
   const abs = path.resolve(root, p);
   const pkg = readPkg(abs);
   return { abs, name: pkg.name, version: pkg.version };
 });
 
-const highest = snapshots
-  .map((s) => s.version.split(".").map(Number))
-  .reduce((a, b) => (a[1] >= b[1] ? a : b));
-const newVersion = `${highest[0]}.${highest[1] + 1}.0`;
+const highest = snapshots.map((s) => s.version.split(".").map(Number)).reduce((a, b) => (a[1] >= b[1] ? a : b));
+const newVersion = PATCH ? `${highest[0]}.${highest[1]}.${highest[2] + 1}` : `${highest[0]}.${highest[1] + 1}.0`;
 
 console.log(`\ncurrent versions:`);
 snapshots.forEach((s) => console.log(`  ${s.name}: ${s.version}`));
@@ -51,9 +64,7 @@ function rollback() {
       for (const depField of ["dependencies", "devDependencies", "peerDependencies"]) {
         if (!pkg[depField]) continue;
         for (const { name: depName, version: depVersion } of snapshots) {
-          if (pkg[depField][depName]) {
-            pkg[depField][depName] = `^${depVersion}`;
-          }
+          if (pkg[depField][depName]) pkg[depField][depName] = `^${depVersion}`;
         }
       }
       writePkg(abs, pkg);
@@ -70,6 +81,26 @@ try {
   if (dirty) {
     console.error("working directory is not clean. commit or stash changes before releasing.");
     process.exit(1);
+  }
+
+  console.log("\n=== linting ===");
+  const lintPassed = runCheck("pnpm run lint");
+  if (!lintPassed) {
+    const proceed = await confirm("eslint reported issues. continue anyway?");
+    if (!proceed) {
+      console.log("aborted.");
+      process.exit(0);
+    }
+  }
+
+  console.log("\n=== checking unused exports ===");
+  const knipPassed = runCheck("pnpm run check:unused");
+  if (!knipPassed) {
+    const proceed = await confirm("knip reported unused code. continue anyway?");
+    if (!proceed) {
+      console.log("aborted.");
+      process.exit(0);
+    }
   }
 
   console.log("\n=== building ===");
@@ -99,7 +130,6 @@ try {
     writePkg(abs, pkg);
     console.log(`  bumped ${name} → ${newVersion}`);
   }
-
 
   console.log("\n=== publishing ===");
   const published = [];

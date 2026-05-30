@@ -1,6 +1,6 @@
 {
   "name": "@anaemia/cli",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "type": "module",
   "bin": {
     "anaemia": "./dist/index.js"
@@ -10,8 +10,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@anaemia/bundler": "^0.1.3",
-    "@anaemia/core": "^0.1.2",
+    "@anaemia/bundler": "^0.2.0",
+    "@anaemia/core": "^0.2.0",
     "@rspack/core": "^2.0.5",
     "@rspack/dev-server": "2.0.1",
     "cac": "^7.0.0",

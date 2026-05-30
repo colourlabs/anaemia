@@ -1,13 +1,13 @@
 import type { CAC } from "cac";
 import logger from "../utils/logger.js";
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 import pc from "picocolors";
 import { generateSharedComponent, scaffoldFeature, scaffoldHook, scaffoldPage } from "../scaffold.js";
 import prompts from "prompts";
-import { transform } from "sucrase";
 import { fileURLToPath } from "node:url";
 import { fetchTemplate } from "../utils/fetch-template.js";
+import { convertTypeScriptToJs } from "../utils/ts-to-js.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,13 +110,10 @@ export function register(cli: CAC) {
         fs.mkdirSync(targetPath, { recursive: true });
       }
 
-      let templatePath = path.resolve(__dirname, "../templates/template-base");
-      if (!fs.existsSync(templatePath)) {
-        templatePath = path.resolve(__dirname, "../templates/base-app");
-      }
+      const templatePath = path.resolve(__dirname, "../templates/base-app");
 
       if (fs.existsSync(templatePath)) {
-        logger.info("unpacking localized scaffolding architecture layout structures...");
+        logger.info("unpacking local template...");
         fs.cpSync(templatePath, targetPath, {
           recursive: true,
           filter: (src) => !["node_modules", "dist", ".anaemia", ".rspack"].includes(path.basename(src)),
@@ -137,49 +134,12 @@ export function register(cli: CAC) {
           }
         }
       };
+
       removeGitKeepFiles(targetPath);
 
       if (response.variant === "js") {
         logger.info("converting workspace assets to vanilla JavaScript...");
-
-        const convertTypeScriptToJs = (dir: string) => {
-          const files = fs.readdirSync(dir);
-
-          for (const file of files) {
-            const fullPath = path.join(dir, file);
-            const stat = fs.statSync(fullPath);
-
-            if (stat.isDirectory()) {
-              convertTypeScriptToJs(fullPath);
-            } else if (file.endsWith(".ts") || file.endsWith(".tsx")) {
-              const isTsx = file.endsWith(".tsx");
-              const code = fs.readFileSync(fullPath, "utf8");
-
-              try {
-                const compiled = transform(code, {
-                  transforms: isTsx ? ["typescript", "jsx"] : ["typescript"],
-                  jsxRuntime: "preserve",
-                  production: true,
-                });
-
-                const newExt = isTsx ? ".jsx" : ".js";
-                const newPath = fullPath.replace(/\.tsx?$/, newExt);
-
-                fs.writeFileSync(newPath, compiled.code, "utf8");
-                fs.unlinkSync(fullPath);
-              } catch {
-                logger.warn(`failed to strip types from ${file}, skipping...`);
-              }
-            }
-          }
-        };
-
         convertTypeScriptToJs(targetPath);
-
-        const tsconfigPath = path.join(targetPath, "tsconfig.json");
-        if (fs.existsSync(tsconfigPath)) {
-          fs.unlinkSync(tsconfigPath);
-        }
       }
 
       const pkgJsonPath = path.join(targetPath, "package.json");

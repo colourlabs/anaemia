@@ -25,9 +25,7 @@ const __dirname = path.dirname(__filename);
 export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
-  const hasSrc = fs.existsSync(path.resolve(coreRuntimeDir, "./src/runtime"));
-  const runtimeDir = hasSrc ? path.resolve(coreRuntimeDir, "./src/runtime") : path.resolve(coreRuntimeDir, "./dist/runtime");
-  const runtimeExt = hasSrc ? "tsx" : "jsx";
+  const runtimeDir = path.resolve(coreRuntimeDir, "./dist/runtime");
 
   const routes = await scanRoutes(appRoot);
   const serverRoutes = scanServerRoutes(appRoot);
@@ -40,7 +38,6 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
 
   const entryFile = generateRouterEntry(appRoot, routes);
   const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
-
   const styleRules = createStyleRules(config);
   const extraClientBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
   const extraServerBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
@@ -59,7 +56,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     devtool: isDev ? "eval-cheap-module-source-map" : false,
     cache: isDev,
     entry: {
-      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, `entry-client.${runtimeExt}`)],
+      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, "entry-client.jsx")],
     },
     output: {
       path: path.resolve(appRoot, "./dist/client"),
@@ -76,8 +73,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       alias: {
         ...sharedResolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
-        [path.resolve(coreRuntimeDir, "./src/runtime/context.ts")]: path.resolve(coreRuntimeDir, "./src/runtime/context.browser.ts"),
-        [path.resolve(coreRuntimeDir, "./dist/runtime/context.js")]: path.resolve(coreRuntimeDir, "./src/runtime/context.browser.ts"),
+        [path.resolve(coreRuntimeDir, "./dist/runtime/context.js")]: path.resolve(coreRuntimeDir, "./dist/runtime/context.browser.js"),
       },
       fallback: { async_hooks: false, "node:async_hooks": false, fs: false, "node:fs": false, path: false, "node:path": false },
     },
@@ -132,7 +128,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     devtool: isDev ? "source-map" : false,
     context: appRoot,
     target: "node",
-    entry: { server: path.resolve(runtimeDir, `entry-server.${runtimeExt}`) },
+    entry: { server: path.resolve(runtimeDir, "entry-server.jsx") },
     output: { path: path.resolve(appRoot, "./dist/server"), filename: "index.js", module: true, chunkFormat: "module", chunkLoading: "import" },
     optimization: { nodeEnv: false },
     resolve: {
@@ -141,8 +137,8 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       alias: {
         ...sharedResolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
-        "@anaemia/core/config": hasSrc ? path.resolve(coreRuntimeDir, "./src/config.ts") : path.resolve(coreRuntimeDir, "./dist/config.js"),
-        "@anaemia/core": hasSrc ? path.resolve(coreRuntimeDir, "./src/index.ts") : path.resolve(coreRuntimeDir, "./dist/index.js"),
+        "@anaemia/core/config": path.resolve(coreRuntimeDir, "./dist/config.js"),
+        "@anaemia/core": path.resolve(coreRuntimeDir, "./dist/index.js"),
         __anaemia_user_config__: path.resolve(appRoot, "./anaemia.config.ts"),
         __anaemia_server_routes__: serverRoutesFile,
       },

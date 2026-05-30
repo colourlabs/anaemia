@@ -81,6 +81,9 @@ importers:
       solid-refresh:
         specifier: ^0.7.8
         version: 0.7.8(solid-js@1.9.13)
+      sucrase:
+        specifier: ^3.35.1
+        version: 3.35.1
     devDependencies:
       '@types/babel__core':
         specifier: ^7.20.5
@@ -89,8 +92,8 @@ importers:
   packages/cli:
     dependencies:
       '@anaemia/bundler':
-        specifier: ^0.3.1
-        version: 0.3.1(solid-js@1.9.13)
+        specifier: ^0.3.3
+        version: 0.3.3(solid-js@1.9.13)
       '@anaemia/core':
         specifier: workspace:*
         version: link:../core
@@ -220,8 +223,8 @@ importers:
 
 packages:
 
-  '@anaemia/bundler@0.3.1':
-    resolution: {integrity: sha512-dfSG6PXbzHPVHLVnUaIjXFjKUBQPSnT3CD+UoN/3Hu4ubvS/KCEs0QG91432ytvDcTOY10/XCG0WGxXAw6NP8Q==}
+  '@anaemia/bundler@0.3.3':
+    resolution: {integrity: sha512-DE6f9n4hhkpbMWJ6HrmpbqqBOjbkHt+q+w/0pcYAGf7r9+2QTMrN4WK/RQwiZ8wkxx9ZVWTdW3jkZU4nb6jGQw==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -1630,7 +1633,7 @@ packages:
 
 snapshots:
 
-  '@anaemia/bundler@0.3.1(solid-js@1.9.13)':
+  '@anaemia/bundler@0.3.3(solid-js@1.9.13)':
     dependencies:
       '@anaemia/core': link:packages/core
       '@babel/core': 7.29.7

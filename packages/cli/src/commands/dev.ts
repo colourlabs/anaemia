@@ -10,6 +10,7 @@ import { WebSocket as NodeWS } from "ws";
 import { loadUserConfig } from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { ChildProcess } from "node:child_process";
+import { flattenWsMessage } from "../utils/flatten-ws-message.js";
 
 export function register(cli: CAC) {
   cli.command("dev", "launch local development environment").action(async () => {
@@ -31,9 +32,7 @@ export function register(cli: CAC) {
       const rspackSocket = new NodeWS(`ws://localhost:${targetPort + 1}/ws`);
 
       rspackSocket.on("message", (data) => {
-        const flattened = Array.isArray(data) ? Buffer.concat(data) : data;
-        if (Buffer.isBuffer(flattened)) clientWs.send(flattened.toString("utf-8"));
-        else clientWs.send(String(flattened));
+        clientWs.send(flattenWsMessage(data));
       });
 
       rspackSocket.on("error", (err) => {

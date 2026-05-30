@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { Configuration } from "@rspack/core";
 import type { PluginItem } from "@babel/core";
 

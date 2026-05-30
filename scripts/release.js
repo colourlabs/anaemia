@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
 const PACKAGES = ["packages/core", "packages/bundler", "packages/cli"];
+const TEMPLATE_PKG = path.resolve(root, "templates/base-app/package.json");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const PATCH = process.argv.includes("--patch");
@@ -48,6 +49,25 @@ const snapshots = PACKAGES.map((p) => {
   const pkg = readPkg(abs);
   return { abs, name: pkg.name, version: pkg.version };
 });
+
+function syncTemplateVersions() {
+  console.log("\n=== syncing template versions ===");
+  if (DRY_RUN) {
+    console.log(`  would update template dependencies to ^${newVersion}`);
+    return;
+  }
+  const pkg = JSON.parse(fs.readFileSync(TEMPLATE_PKG, "utf-8"));
+  for (const depField of ["dependencies", "devDependencies", "peerDependencies"]) {
+    if (!pkg[depField]) continue;
+    for (const { name } of snapshots) {
+      if (pkg[depField][name]) {
+        pkg[depField][name] = `^${newVersion}`;
+        console.log(`  updated template → ${depField}.${name} to ^${newVersion}`);
+      }
+    }
+  }
+  fs.writeFileSync(TEMPLATE_PKG, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+}
 
 const highest = snapshots.map((s) => s.version.split(".").map(Number)).reduce((a, b) => (a[1] >= b[1] ? a : b));
 const newVersion = PATCH ? `${highest[0]}.${highest[1]}.${highest[2] + 1}` : `${highest[0]}.${highest[1] + 1}.0`;
@@ -132,6 +152,8 @@ try {
     console.log(`  bumped ${name} → ${newVersion}`);
   }
 
+  syncTemplateVersions();
+
   console.log("\n=== publishing ===");
   const published = [];
   for (const { abs, name } of snapshots) {
@@ -147,7 +169,7 @@ try {
   }
 
   console.log("\n=== committing release ===");
-  run(`git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")}`);
+  run(`git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")} templates/base-app/package.json`);
   run(`git commit -m "release v${newVersion}"`);
   run(`git tag -a v${newVersion} -m "release v${newVersion}"`);
   run("git push --follow-tags");

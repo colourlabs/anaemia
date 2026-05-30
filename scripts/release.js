@@ -22,6 +22,7 @@ function readPkg(pkgPath) {
 }
 
 function writePkg(pkgPath, pkg) {
+  if (DRY_RUN) return;
   fs.writeFileSync(path.join(pkgPath, "package.json"), JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 }
 
@@ -84,7 +85,7 @@ try {
   }
 
   console.log("\n=== linting ===");
-  const lintPassed = runCheck("pnpm run lint");
+  const lintPassed = DRY_RUN ? true : runCheck("pnpm run lint");
   if (!lintPassed) {
     const proceed = await confirm("eslint reported issues. continue anyway?");
     if (!proceed) {
@@ -94,7 +95,7 @@ try {
   }
 
   console.log("\n=== checking unused exports ===");
-  const knipPassed = runCheck("pnpm run check:unused");
+  const knipPassed = DRY_RUN ? true : runCheck("pnpm run check:unused");
   if (!knipPassed) {
     const proceed = await confirm("knip reported unused code. continue anyway?");
     if (!proceed) {

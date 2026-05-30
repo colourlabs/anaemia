@@ -115,11 +115,10 @@ try {
     }
   }
 
-  // 7. git commit + tag + push
   console.log("\n=== committing release ===");
   run(`git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")}`);
   run(`git commit -m "release v${newVersion}"`);
-  run(`git tag v${newVersion}`);
+  run(`git tag -a v${newVersion} -m "release v${newVersion}"`);
   run("git push --follow-tags");
 
   console.log(`\n✓ released v${newVersion}`);

@@ -14,4 +14,4 @@ export function register(cli: CAC) {
       env: { ...process.env, NODE_ENV: "production", PORT: String(targetPort) },
     });
   });
-};
+}

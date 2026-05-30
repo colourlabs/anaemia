@@ -24,6 +24,7 @@ const __dirname = path.dirname(__filename);
 
 export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
+  const rawEnv = process.env;
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
   const runtimeDir = path.resolve(coreRuntimeDir, "./dist/runtime");
 
@@ -42,6 +43,27 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
   const extraClientBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
   const extraServerBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
   const solidRefreshPlugin = [require.resolve("solid-refresh/babel"), { bundler: "rspack-esm", jsx: false }];
+
+  // env processing
+  const serverEnv: Record<string, string> = {
+    MODE: JSON.stringify(process.env.NODE_ENV || "development"),
+    DEV: JSON.stringify(isDev),
+    PROD: JSON.stringify(!isDev),
+  };
+  for (const key in rawEnv) {
+    serverEnv[key] = JSON.stringify(rawEnv[key]);
+  }
+
+  const clientEnv: Record<string, string> = {
+    MODE: JSON.stringify(process.env.NODE_ENV || "development"),
+    DEV: JSON.stringify(isDev),
+    PROD: JSON.stringify(!isDev),
+  };
+  for (const key in rawEnv) {
+    if (key.startsWith("PUBLIC_")) {
+      clientEnv[key] = JSON.stringify(rawEnv[key]);
+    }
+  }
 
   const sharedResolve = {
     extensions: [".tsx", ".ts", ".jsx", ".js", ".json", ".scss", ".css"],
@@ -92,6 +114,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       new rspack.DefinePlugin({
         __ANAEMIA_RUNTIME_CONFIG__: JSON.stringify({ port: config.port, assets: config.assets, styles: config.styles }),
         ...config.define?.client,
+        "import.meta.env": clientEnv,
       }),
       new rspack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
         resource.request = resource.request.replace(/^node:/, "");
@@ -143,7 +166,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         __anaemia_server_routes__: serverRoutesFile,
       },
     },
-    plugins: [new rspack.DefinePlugin({ ...config.define?.server })],
+    plugins: [new rspack.DefinePlugin({ ...config.define?.server, "import.meta.env": serverEnv })],
     module: {
       parser: { "css/auto": { namedExports: false } },
       rules: [

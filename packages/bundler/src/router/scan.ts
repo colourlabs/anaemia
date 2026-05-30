@@ -50,11 +50,17 @@ const DYNAMIC_SEGMENT = /^\[(.+?)\]\.(tsx|jsx)$/;
 
 export function scanServerRoutes(appRoot: string): ServerRouteEntry[] {
   const routesDir = path.resolve(appRoot, "./src/routes");
-  const files = glob.sync("**/_route.{ts,tsx}", { cwd: routesDir, posix: true });
-
+  const files = glob.sync("**/_route.{ts,tsx,js,jsx}", { cwd: routesDir, posix: true });
+  
   return files.map((file) => {
     const dir = path.dirname(file);
-    const urlPattern = dir === "." ? "/" : `/${dir}`;
+    
+    const normalizedDir = dir
+      .replace(/\[\.\.\.(.+?)\]/g, "*")
+      .replace(/\[(.+?)\]/g, ":$1");
+
+    const urlPattern = normalizedDir === "." ? "/" : `/${normalizedDir}`;
+    
     return {
       urlPattern,
       filePath: path.resolve(routesDir, file),

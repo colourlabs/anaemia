@@ -19,7 +19,7 @@ const logger = {
     console.error(`${this.prefix} ${pc.red(msg)}`);
     if (detail) console.error(detail);
   },
-  
+
   compiler(msg: string) {
     console.log(`${pc.bold(pc.magenta("[compiler]"))} ${msg}`);
   },

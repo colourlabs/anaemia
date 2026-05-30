@@ -9,7 +9,7 @@
     "test": "pnpm -r --if-present test && pnpm -r --if-present test:integration",
     "typecheck": "tsc --noEmit",
     "clean": "pnpm -r exec rm -rf dist .rspack node_modules",
-    "build": "pnpm --filter \"@anaemia/*\" build",
+    "build": "pnpm --filter \"@anaemia/*\" --filter \"!@anaemia/template-base\" build",
     "prepublishOnly": "pnpm run build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

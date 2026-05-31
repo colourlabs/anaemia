@@ -43,14 +43,9 @@ export async function getRspackConfig(
   const entryFile = generateRouterEntry(appRoot, routes);
   const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
   const styleRules = createStyleRules(config);
-  const extraClientBabelPlugins =
-    config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
-  const extraServerBabelPlugins =
-    config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
-  const solidRefreshPlugin = [
-    require.resolve("solid-refresh/babel"),
-    { bundler: "rspack-esm", jsx: false },
-  ];
+  const extraClientBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
+  const extraServerBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
+  const solidRefreshPlugin = [require.resolve("solid-refresh/babel"), { bundler: "rspack-esm", jsx: false }];
 
   // env processing
   const serverEnv: Record<string, string> = {
@@ -86,10 +81,7 @@ export async function getRspackConfig(
     devtool: isDev ? "eval-cheap-module-source-map" : false,
     cache: isDev,
     entry: {
-      client: [
-        ...(isDev ? [require.resolve("solid-refresh")] : []),
-        path.resolve(runtimeDir, "entry-client.jsx"),
-      ],
+      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, "entry-client.jsx")],
     },
     output: {
       path: path.resolve(appRoot, "./dist/client"),
@@ -167,11 +159,7 @@ export async function getRspackConfig(
           ...createBabelRule({
             isServer: false,
             isDev,
-            plugins: [
-              clientServerFnTransform,
-              ...(isDev ? [solidRefreshPlugin] : []),
-              ...extraClientBabelPlugins,
-            ],
+            plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins],
           }),
           exclude: (modulePath: string) => {
             if (modulePath.includes("@anaemia") && modulePath.includes("core")) return false;

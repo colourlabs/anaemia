@@ -30,9 +30,7 @@ function buildTree(
   parentPrefix: string,
 ): TreeNode[] {
   const nodes: TreeNode[] = [];
-  const leafIndices = strippedLayouts
-    .map((l, i) => (l.length === 0 ? i : -1))
-    .filter((i) => i !== -1);
+  const leafIndices = strippedLayouts.map((l, i) => (l.length === 0 ? i : -1)).filter((i) => i !== -1);
 
   for (const i of leafIndices) {
     const route = routes[routeIndices[i]];
@@ -106,19 +104,14 @@ function renderTree(nodes: TreeNode[], indent = 6): string {
       let layoutPath = node.relativePath;
       const inner = renderTree(node.children, indent + 2);
 
-      return [
-        `${pad}<Route path="${layoutPath}" component={Layout${node.layoutIdx}}>`,
-        inner,
-        `${pad}</Route>`,
-      ].join("\n");
+      return [`${pad}<Route path="${layoutPath}" component={Layout${node.layoutIdx}}>`, inner, `${pad}</Route>`].join(
+        "\n",
+      );
     })
     .join("\n");
 }
 
-function buildPreloadMapString(
-  routes: RouteManifestEntry[],
-  allLayouts: Map<string, number>,
-): string {
+function buildPreloadMapString(routes: RouteManifestEntry[], allLayouts: Map<string, number>): string {
   const mapLines = routes.map((r, i) => {
     const layoutTokens = r.layouts.map((l) => `Layout${allLayouts.get(l.filePath)}`);
     const pageToken = `Route${i}`;
@@ -136,12 +129,8 @@ export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[
   const ext = isTs ? "tsx" : "jsx";
   const outPath = path.resolve(outDir, `__anaemia_entry__.${ext}`);
 
-  const conventionalRoutes = routes.filter(
-    (r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx"),
-  );
-  const errorRoutes = routes.filter(
-    (r) => r.filePath.endsWith("404.tsx") || r.filePath.endsWith("500.tsx"),
-  );
+  const conventionalRoutes = routes.filter((r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx"));
+  const errorRoutes = routes.filter((r) => r.filePath.endsWith("404.tsx") || r.filePath.endsWith("500.tsx"));
 
   const allLayouts = new Map<string, number>();
 
@@ -165,9 +154,7 @@ export function generateRouterEntry(appRoot: string, routes: RouteManifestEntry[
       const guardSources = [...r.layouts.map((l) => l.filePath), r.filePath]
         .map((fp) => {
           const configPath = fp.replace(/\.(tsx|jsx)$/, ".config.ts");
-          const guardPath = fs.existsSync(configPath)
-            ? configPath
-            : fp.replace(/\.(jsx)$/, ".config.js");
+          const guardPath = fs.existsSync(configPath) ? configPath : fp.replace(/\.(jsx)$/, ".config.js");
           const resolvedGuardPath = fs.existsSync(guardPath) ? guardPath : fp;
           return `() => import("${resolvedGuardPath.replace(/\\/g, "/")}").then(m => m?.config?.guards ?? [])`;
         })
@@ -259,9 +246,7 @@ ${routeJsx}
       const loaders = sources
         .map((fp) => {
           const configPath = fp.replace(/\.(tsx|jsx)$/, ".config.ts");
-          const guardPath = fs.existsSync(configPath)
-            ? configPath
-            : fp.replace(/\.jsx$/, ".config.js");
+          const guardPath = fs.existsSync(configPath) ? configPath : fp.replace(/\.jsx$/, ".config.js");
           const resolvedGuardPath = fs.existsSync(guardPath) ? guardPath : fp;
           return `async () => { const m = await import("${resolvedGuardPath.replace(/\\/g, "/")}"); return m?.config?.guards ?? []; }`;
         })

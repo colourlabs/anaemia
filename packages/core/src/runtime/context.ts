@@ -17,10 +17,7 @@ export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { i
       if (!store.has("__SERVER_FUNCTION_DATA__")) {
         store.set("__SERVER_FUNCTION_DATA__", {});
       }
-      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<
-        string,
-        Record<string, unknown>
-      >;
+      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<string, Record<string, unknown>>;
       if (!functionCache[hashId]) {
         functionCache[hashId] = {};
       }

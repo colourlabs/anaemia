@@ -13,16 +13,10 @@ async function createTmpProject(isTs = true) {
     path.join(dir, "src/routes/index.tsx"),
     `export default function Index() { return <div>hello</div>; }`,
   );
-  fs.writeFileSync(
-    path.join(dir, "index.html"),
-    `<html><body><div anaemia-entry></div></body></html>`,
-  );
+  fs.writeFileSync(path.join(dir, "index.html"), `<html><body><div anaemia-entry></div></body></html>`);
 
   if (isTs) {
-    fs.writeFileSync(
-      path.join(dir, "tsconfig.json"),
-      JSON.stringify({ compilerOptions: { strict: true } }),
-    );
+    fs.writeFileSync(path.join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true } }));
   }
 
   return dir;
@@ -56,22 +50,10 @@ test("runtimeDir always resolves to dist, never src", async () => {
     const [clientConfig, serverConfig] = await getRspackConfig(dir, {});
     const clientEntry = Object.values(clientConfig.entry).flat().join(" ");
     const serverEntry = Object.values(serverConfig.entry).flat().join(" ");
-    assert.ok(
-      !clientEntry.includes("/src/runtime"),
-      `client entry points into src: ${clientEntry}`,
-    );
-    assert.ok(
-      !serverEntry.includes("/src/runtime"),
-      `server entry points into src: ${serverEntry}`,
-    );
-    assert.ok(
-      clientEntry.includes("/dist/runtime"),
-      `client entry should point to dist: ${clientEntry}`,
-    );
-    assert.ok(
-      serverEntry.includes("/dist/runtime"),
-      `server entry should point to dist: ${serverEntry}`,
-    );
+    assert.ok(!clientEntry.includes("/src/runtime"), `client entry points into src: ${clientEntry}`);
+    assert.ok(!serverEntry.includes("/src/runtime"), `server entry points into src: ${serverEntry}`);
+    assert.ok(clientEntry.includes("/dist/runtime"), `client entry should point to dist: ${clientEntry}`);
+    assert.ok(serverEntry.includes("/dist/runtime"), `server entry should point to dist: ${serverEntry}`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -83,10 +65,7 @@ test("generated entry is .tsx for TypeScript projects", async () => {
     await getRspackConfig(dir, {});
     const entryFile = path.join(dir, ".anaemia/__anaemia_entry__.tsx");
     assert.ok(fs.existsSync(entryFile), "expected .tsx entry file");
-    assert.ok(
-      !fs.existsSync(path.join(dir, ".anaemia/__anaemia_entry__.jsx")),
-      "unexpected .jsx entry file",
-    );
+    assert.ok(!fs.existsSync(path.join(dir, ".anaemia/__anaemia_entry__.jsx")), "unexpected .jsx entry file");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -98,10 +77,7 @@ test("generated entry is .jsx for JavaScript projects", async () => {
     await getRspackConfig(dir, {});
     const entryFile = path.join(dir, ".anaemia/__anaemia_entry__.jsx");
     assert.ok(fs.existsSync(entryFile), "expected .jsx entry file");
-    assert.ok(
-      !fs.existsSync(path.join(dir, ".anaemia/__anaemia_entry__.tsx")),
-      "unexpected .tsx entry file",
-    );
+    assert.ok(!fs.existsSync(path.join(dir, ".anaemia/__anaemia_entry__.tsx")), "unexpected .tsx entry file");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

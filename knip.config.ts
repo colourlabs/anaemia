@@ -8,11 +8,7 @@ export default {
       project: ["src/**/*.ts"],
     },
     "packages/core": {
-      entry: [
-        "src/runtime/entry-client.tsx",
-        "src/runtime/entry-server.tsx",
-        "src/runtime/context.browser.ts",
-      ],
+      entry: ["src/runtime/entry-client.tsx", "src/runtime/entry-server.tsx", "src/runtime/context.browser.ts"],
       project: ["src/**/*.ts", "src/**/*.tsx"],
       ignore: ["src/runtime/entry-client.tsx", "src/runtime/entry-server.tsx"],
     },

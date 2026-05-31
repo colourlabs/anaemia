@@ -22,9 +22,7 @@ export function writeManifest(appRoot: string, routes: RouteManifestEntry[]): vo
     }
   }
 
-  const conventionalRoutes = routes.filter(
-    (r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx"),
-  );
+  const conventionalRoutes = routes.filter((r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx"));
 
   const manifest: BuildManifest = {
     routes: conventionalRoutes,

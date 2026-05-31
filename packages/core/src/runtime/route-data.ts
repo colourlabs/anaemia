@@ -43,9 +43,7 @@ function readSSRData(): unknown {
   }
 }
 
-export function RouteDataController<TParams extends Params = Params>(
-  props: RouteDataControllerProps<TParams>,
-) {
+export function RouteDataController<TParams extends Params = Params>(props: RouteDataControllerProps<TParams>) {
   const params = useParams<TParams>();
   const location = useLocation();
   const ssrData = readSSRData();

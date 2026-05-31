@@ -6,9 +6,7 @@ interface RspackModule {
   LightningCssMinimizerRspackPlugin: typeof LightningCssType;
 }
 
-export function anaemiaLightningCssPlugin(
-  options: { browserslist?: string[] } = {},
-): AnaemiaPlugin {
+export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } = {}): AnaemiaPlugin {
   const targets = options.browserslist ?? ["defaults", "not IE 11"];
 
   const localRequire = createRequire(import.meta.url);
@@ -30,12 +28,7 @@ export function anaemiaLightningCssPlugin(
 
       if (config.module?.rules) {
         config.module.rules.forEach((rule) => {
-          if (
-            rule &&
-            typeof rule === "object" &&
-            rule.test &&
-            rule.test.toString().includes("ss")
-          ) {
+          if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
 
             rule.use = [
@@ -71,12 +64,7 @@ export function anaemiaLightningCssPlugin(
     serverRspackConfig(config) {
       if (config.module?.rules) {
         config.module.rules.forEach((rule) => {
-          if (
-            rule &&
-            typeof rule === "object" &&
-            rule.test &&
-            rule.test.toString().includes("ss")
-          ) {
+          if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
 
             rule.use = [

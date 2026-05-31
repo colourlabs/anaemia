@@ -13,8 +13,8 @@ export function WelcomeHero(props: WelcomeHeroProps) {
     <div class={styles.wrapper}>
       <h1 class={styles.title}>anaemia</h1>
       <p class={styles.subtitle}>
-        a high-performance, opinionated SolidJS SSR framework that allows you to ship huge projects
-        fast and maintain them!
+        a high-performance, opinionated SolidJS SSR framework that allows you to ship huge projects fast and maintain
+        them!
       </p>
 
       <div class={styles.card}>
@@ -28,9 +28,7 @@ export function WelcomeHero(props: WelcomeHeroProps) {
       </div>
 
       <div class={styles.footer}>
-        edit{" "}
-        <code class={styles.inlineCode}>src/features/welcome-hero/components/WelcomeHero.tsx</code>{" "}
-        to begin.
+        edit <code class={styles.inlineCode}>src/features/welcome-hero/components/WelcomeHero.tsx</code> to begin.
       </div>
     </div>
   );

@@ -24,11 +24,7 @@ function readPkg(pkgPath) {
 
 function writePkg(pkgPath, pkg) {
   if (DRY_RUN) return;
-  fs.writeFileSync(
-    path.join(pkgPath, "package.json"),
-    JSON.stringify(pkg, null, 2) + "\n",
-    "utf-8",
-  );
+  fs.writeFileSync(path.join(pkgPath, "package.json"), JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 }
 
 function confirm(question) {
@@ -73,12 +69,8 @@ function syncTemplateVersions() {
   fs.writeFileSync(TEMPLATE_PKG, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 }
 
-const highest = snapshots
-  .map((s) => s.version.split(".").map(Number))
-  .reduce((a, b) => (a[1] >= b[1] ? a : b));
-const newVersion = PATCH
-  ? `${highest[0]}.${highest[1]}.${highest[2] + 1}`
-  : `${highest[0]}.${highest[1] + 1}.0`;
+const highest = snapshots.map((s) => s.version.split(".").map(Number)).reduce((a, b) => (a[1] >= b[1] ? a : b));
+const newVersion = PATCH ? `${highest[0]}.${highest[1]}.${highest[2] + 1}` : `${highest[0]}.${highest[1] + 1}.0`;
 
 console.log(`\ncurrent versions:`);
 snapshots.forEach((s) => console.log(`  ${s.name}: ${s.version}`));
@@ -183,9 +175,7 @@ try {
   }
 
   console.log("\n=== committing release ===");
-  run(
-    `git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")} templates/base-app/package.json`,
-  );
+  run(`git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")} templates/base-app/package.json`);
   run(`git commit -m "release v${newVersion}"`);
   run(`git tag -a v${newVersion} -m "release v${newVersion}"`);
   run("git push --follow-tags");

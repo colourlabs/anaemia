@@ -5,12 +5,8 @@ import path from "node:path";
 
 const isTypeScript = fs.existsSync(path.resolve(process.cwd(), "tsconfig.json"));
 
-const tsRules = isTypeScript
-  ? await import("@typescript-eslint/eslint-plugin").then((m) => m.default)
-  : null;
-const tsParser = isTypeScript
-  ? await import("@typescript-eslint/parser").then((m) => m.default)
-  : null;
+const tsRules = isTypeScript ? await import("@typescript-eslint/eslint-plugin").then((m) => m.default) : null;
+const tsParser = isTypeScript ? await import("@typescript-eslint/parser").then((m) => m.default) : null;
 
 export default [
   js.configs.recommended,

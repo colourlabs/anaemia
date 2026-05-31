@@ -6,13 +6,9 @@ export function generateServerRoutes(appRoot: string, routes: ServerRouteEntry[]
   const outDir = path.resolve(appRoot, "./.anaemia");
   const outPath = path.resolve(outDir, "./__anaemia_server_routes__.ts");
 
-  const imports = routes
-    .map((r, i) => `import * as ServerRoute${i} from "${r.filePath}";`)
-    .join("\n");
+  const imports = routes.map((r, i) => `import * as ServerRoute${i} from "${r.filePath}";`).join("\n");
 
-  const registrations = routes
-    .map((r, i) => `  registerRoute(app, "${r.urlPattern}", ServerRoute${i});`)
-    .join("\n");
+  const registrations = routes.map((r, i) => `  registerRoute(app, "${r.urlPattern}", ServerRoute${i});`).join("\n");
 
   const code = `
 // @ts-nocheck

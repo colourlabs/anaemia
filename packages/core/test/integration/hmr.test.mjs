@@ -39,10 +39,7 @@ async function resolveConfigPort() {
 
 const TARGET_PORT = await resolveConfigPort();
 const BASE_URL = `http://localhost:${TARGET_PORT}`;
-const componentPath = path.resolve(
-  projectRoot,
-  "src/features/welcome-hero/components/WelcomeHero.tsx",
-);
+const componentPath = path.resolve(projectRoot, "src/features/welcome-hero/components/WelcomeHero.tsx");
 
 test("integration - dev server HMR & hydration lifecycle", async (t) => {
   let devProcess = null;
@@ -93,11 +90,7 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
           await new Promise((r) => setTimeout(r, 500));
         }
-        reject(
-          new Error(
-            `Server process started but port ${TARGET_PORT} never responded to HTTP requests.`,
-          ),
-        );
+        reject(new Error(`Server process started but port ${TARGET_PORT} never responded to HTTP requests.`));
       };
 
       devProcess.stdout.on("data", (data) => {
@@ -141,11 +134,7 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
       `<h1 class={styles.title}>anaemia updated!</h1>`,
     );
 
-    assert.notEqual(
-      originalComponentContent,
-      updatedContent,
-      "Regex failed to modify component text.",
-    );
+    assert.notEqual(originalComponentContent, updatedContent, "Regex failed to modify component text.");
     fs.writeFileSync(componentPath, updatedContent, "utf-8");
 
     await page.waitForFunction(

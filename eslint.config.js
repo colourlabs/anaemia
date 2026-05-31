@@ -52,12 +52,7 @@ export default [
 
   // node globals for bundler + cli + scripts
   {
-    files: [
-      "packages/bundler/**/*.ts",
-      "packages/cli/**/*.ts",
-      "packages/core/src/plugins/**/*.ts",
-      "scripts/**/*.js",
-    ],
+    files: ["packages/bundler/**/*.ts", "packages/cli/**/*.ts", "packages/core/src/plugins/**/*.ts", "scripts/**/*.js"],
     languageOptions: {
       globals: { ...globals.node },
     },

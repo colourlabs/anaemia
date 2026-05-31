@@ -201,10 +201,7 @@ function parseFilePath(file: string): {
   return { urlPattern, chunkName, params, type };
 }
 
-function resolveLayoutChain(
-  dir: string,
-  layoutMap: Map<string, LayoutManifestEntry>,
-): LayoutManifestEntry[] {
+function resolveLayoutChain(dir: string, layoutMap: Map<string, LayoutManifestEntry>): LayoutManifestEntry[] {
   const layouts: LayoutManifestEntry[] = [];
   let current = dir;
 

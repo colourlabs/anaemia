@@ -14,11 +14,7 @@ import type { StatusCode, RedirectStatusCode } from "hono/utils/http-status";
 import App from "anaemia-user-app";
 
 // @ts-expect-error - resolved by Rspack
-import {
-  preloadActiveClientRoute,
-  serverLoaderRegistry,
-  serverGuardRegistry,
-} from "anaemia-user-app";
+import { preloadActiveClientRoute, serverLoaderRegistry, serverGuardRegistry } from "anaemia-user-app";
 
 // @ts-expect-error - resolved by Rspack
 import { registerServerRoutes } from "__anaemia_server_routes__";
@@ -172,10 +168,8 @@ const loadManifestAndTemplate = async () => {
     }
   } else {
     try {
-      if (fs.existsSync(templatePath))
-        memoizedHtmlTemplate = fs.readFileSync(templatePath, "utf-8");
-      if (fs.existsSync(manifestPath))
-        memoizedManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+      if (fs.existsSync(templatePath)) memoizedHtmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      if (fs.existsSync(manifestPath)) memoizedManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
     } catch {
       console.warn("build assets not fully initialized during bootstrapping cycle.");
     }
@@ -206,14 +200,9 @@ type GuardFn = (ctx: {
   | undefined
   | { redirect: string; status?: 301 | 302 | 307 | 308 }
   | { status: number; body?: string }
-  | Promise<
-      void | undefined | { redirect: string; status?: number } | { status: number; body?: string }
-    >;
+  | Promise<void | undefined | { redirect: string; status?: number } | { status: number; body?: string }>;
 
-async function runGuards(
-  pattern: string,
-  ctx: { params: Record<string, string>; request: Request; url: string },
-) {
+async function runGuards(pattern: string, ctx: { params: Record<string, string>; request: Request; url: string }) {
   const chain: (() => Promise<GuardFn[]>)[] = serverGuardRegistry.get(pattern) ?? [];
   for (const loadGuards of chain) {
     const guards: GuardFn[] = await loadGuards();
@@ -275,12 +264,7 @@ app.get("*", async (c) => {
   }
 
   const reqPath = c.req.path;
-  const {
-    activeChunk,
-    targetPattern,
-    statusCode: matchedStatus,
-    params,
-  } = matchRoute(manifest, reqPath);
+  const { activeChunk, targetPattern, statusCode: matchedStatus, params } = matchRoute(manifest, reqPath);
   let statusCode: StatusCode = matchedStatus;
   const loaderArgs = { params, request: c.req.raw };
 
@@ -296,10 +280,7 @@ app.get("*", async (c) => {
       });
       if (guardResult) {
         if ("redirect" in guardResult)
-          return c.redirect(
-            guardResult.redirect,
-            (guardResult.status ?? 302) as RedirectStatusCode,
-          );
+          return c.redirect(guardResult.redirect, (guardResult.status ?? 302) as RedirectStatusCode);
         if ("status" in guardResult) statusCode = guardResult.status as StatusCode;
       }
     } catch (err) {
@@ -406,10 +387,7 @@ app.get("*", async (c) => {
   const sanitizedPayload = htmlPayload.trim();
 
   let completeHtmlOutput = ENTRY_TAG_REGEX.test(template)
-    ? template.replace(
-        ENTRY_TAG_REGEX,
-        (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`,
-      )
+    ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`)
     : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
 
   completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${combinedHeadInjections}`);

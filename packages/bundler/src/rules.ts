@@ -8,9 +8,7 @@ export function createStyleRules(config: AnaemiaConfig) {
   const useSass = config.styles?.sass !== false;
   const useModules = config.styles?.modules ?? true;
 
-  const baseLoaders = useSass
-    ? [{ loader: require.resolve("sass-loader"), options: { api: "modern" } }]
-    : [];
+  const baseLoaders = useSass ? [{ loader: require.resolve("sass-loader"), options: { api: "modern" } }] : [];
 
   return {
     client: {
@@ -49,10 +47,7 @@ export function createBabelRule({
         loader: require.resolve("babel-loader"),
         options: {
           presets: [
-            [
-              require.resolve("babel-preset-solid"),
-              { generate: generateMode, hydratable: true, dev: isDev },
-            ],
+            [require.resolve("babel-preset-solid"), { generate: generateMode, hydratable: true, dev: isDev }],
             require.resolve("@babel/preset-typescript"),
           ],
           plugins: plugins,

@@ -33,10 +33,7 @@ function ensureCacheInitialized() {
   }
 }
 
-function findLooseCacheMatch(
-  serverFunctionData: Record<string, unknown>,
-  targetArg: string,
-): CacheMatch | undefined {
+function findLooseCacheMatch(serverFunctionData: Record<string, unknown>, targetArg: string): CacheMatch | undefined {
   if (!serverFunctionData) return undefined;
   const strictKey = JSON.stringify([targetArg]);
   if (strictKey in serverFunctionData) {
@@ -56,9 +53,7 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as
-          | ServerFunctionCache
-          | undefined;
+        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;
@@ -90,9 +85,7 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as
-          | ServerFunctionCache
-          | undefined;
+        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;

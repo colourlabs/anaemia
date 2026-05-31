@@ -26,6 +26,15 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,scss,css}": "oxfmt --write",
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
@@ -35,7 +44,9 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
     "knip": "^6.14.2",
+    "lint-staged": "^17.0.7",
     "oxfmt": "^0.52.0",
+    "simple-git-hooks": "^2.13.1",
     "solid-js": "^1.9.13",
     "typescript": "^6.0.3"
   },

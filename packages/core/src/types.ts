@@ -13,10 +13,9 @@ export interface LoaderArgs<Params extends Record<string, string> = Record<strin
 /**
  * represents an application page loader function.
  */
-export type LoaderFunction<
-  ResponseData = unknown,
-  Params extends Record<string, string> = Record<string, string>,
-> = (args: LoaderArgs<Params>) => Promise<ResponseData> | ResponseData;
+export type LoaderFunction<ResponseData = unknown, Params extends Record<string, string> = Record<string, string>> = (
+  args: LoaderArgs<Params>,
+) => Promise<ResponseData> | ResponseData;
 
 /**
  * extracts and unwraps the true data structure returned by a server function or loader.
@@ -45,16 +44,9 @@ export type GuardFn = (ctx: {
   | undefined
   | { redirect: string; status?: RedirectStatusCode }
   | { status: number; body?: string }
-  | Promise<
-      | void
-      | undefined
-      | { redirect: string; status?: RedirectStatusCode }
-      | { status: number; body?: string }
-    >;
+  | Promise<void | undefined | { redirect: string; status?: RedirectStatusCode } | { status: number; body?: string }>;
 
-export type ServerFunction<Args extends unknown[], Return> = ((
-  ...args: Args
-) => Promise<Return>) & {
+export type ServerFunction<Args extends unknown[], Return> = ((...args: Args) => Promise<Return>) & {
   id?: string;
   urlId?: string;
 };

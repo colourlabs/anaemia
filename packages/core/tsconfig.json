@@ -8,5 +8,5 @@
     "declarationMap": true,
     "types": ["node"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "./anaemia.d.ts"]
 }

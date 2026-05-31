@@ -116,8 +116,8 @@ importers:
   packages/cli:
     dependencies:
       '@anaemia/bundler':
-        specifier: ^0.4.0
-        version: 0.4.0(solid-js@1.9.13)
+        specifier: ^0.5.0
+        version: 0.5.0(solid-js@1.9.13)
       '@anaemia/core':
         specifier: workspace:*
         version: link:../core
@@ -247,8 +247,8 @@ importers:
 
 packages:
 
-  '@anaemia/bundler@0.4.0':
-    resolution: {integrity: sha512-J9jxG/JMCCrI7FfufVfr1JyHV5McOHZDPXIE0TaTqLFc4Eceuq/6XcFZV2VoCkODdb/VGW/v7UOM5hYafrBCuw==}
+  '@anaemia/bundler@0.5.0':
+    resolution: {integrity: sha512-nJxmBAZhNs0mKC1uPSLC9iPIra4yE1afvtKVWhmSa0Kp62kPpceABKuIdKU3uYmSbRbUSx27SWPxH7j7IYqzRg==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2088,7 +2088,7 @@ packages:
 
 snapshots:
 
-  '@anaemia/bundler@0.4.0(solid-js@1.9.13)':
+  '@anaemia/bundler@0.5.0(solid-js@1.9.13)':
     dependencies:
       '@anaemia/core': link:packages/core
       '@babel/core': 7.29.7
@@ -2100,6 +2100,8 @@ snapshots:
       dotenv-expand: 13.0.0
       glob: 13.0.6
       jiti: 2.7.0
+      oxc-parser: 0.133.0
+      picocolors: 1.1.1
       sass: 1.100.0
       sass-loader: 17.0.0(@rspack/core@2.0.5)(sass@1.100.0)
       solid-refresh: 0.7.8(solid-js@1.9.13)

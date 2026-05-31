@@ -4,6 +4,7 @@ import { useParams, useLocation, type Params } from "@solidjs/router";
 import type { Location } from "@solidjs/router";
 import { ssrStorage } from "./context.js";
 import { createRouteRequest } from "./route-request.js";
+import { ANAEMIA_DATA_SCRIPT_ID, LOADER_DATA_KEY } from "./shared/constants.js";
 
 type LoaderArgs<TParams extends Params> = {
   params: TParams;
@@ -25,19 +26,19 @@ const RouteDataContext = createContext<RouteDataContextValue>();
 let hasReadClientHydrationData = false;
 
 interface AnaemiaHydrationData {
-  __LOADER_DATA__?: unknown;
+  [LOADER_DATA_KEY]?: unknown;
 }
 
 function readSSRData(): unknown {
   if (isServer) {
-    return ssrStorage.getStore()?.get("__LOADER_DATA__");
+    return ssrStorage.getStore()?.get(LOADER_DATA_KEY);
   }
   if (hasReadClientHydrationData) return undefined;
   hasReadClientHydrationData = true;
-  const el = document.getElementById("__ANAEMIA_DATA__");
+  const el = document.getElementById(ANAEMIA_DATA_SCRIPT_ID);
   if (!el?.textContent) return undefined;
   try {
-    return (JSON.parse(el.textContent) as AnaemiaHydrationData).__LOADER_DATA__;
+    return (JSON.parse(el.textContent) as AnaemiaHydrationData)[LOADER_DATA_KEY];
   } catch {
     return undefined;
   }

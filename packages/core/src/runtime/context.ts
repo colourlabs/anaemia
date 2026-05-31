@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
 
 type AnyFn = (...args: unknown[]) => unknown;
 
@@ -14,13 +15,10 @@ export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { i
     const result = await backendFn(...args);
     const store = ssrStorage.getStore();
     if (store && hashId) {
-      if (!store.has("__SERVER_FUNCTION_DATA__")) {
-        store.set("__SERVER_FUNCTION_DATA__", {});
+      if (!store.has(SERVER_FUNCTION_DATA_KEY)) {
+        store.set(SERVER_FUNCTION_DATA_KEY, {});
       }
-      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<
-        string,
-        Record<string, unknown> | undefined
-      >;
+      const functionCache = store.get(SERVER_FUNCTION_DATA_KEY) as Record<string, Record<string, unknown> | undefined>;
       if (!functionCache[hashId]) {
         functionCache[hashId] = {};
       }

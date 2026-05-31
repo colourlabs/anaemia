@@ -28,7 +28,10 @@
       "types": "./dist/plugins/index.d.ts",
       "import": "./dist/plugins/index.js"
     },
-    "./client": "./anaemia.d.ts",
+    "./client": {
+      "types": "./anaemia.d.ts",
+      "default": "./anaemia.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

@@ -1,5 +1,6 @@
 import { createResource, type ResourceOptions, type ResourceReturn } from "solid-js";
 import { isServer } from "solid-js/web";
+import { SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
 
 interface ServerStorage {
   getStore?: () => Map<string, unknown> | undefined;
@@ -25,7 +26,7 @@ export function createServerResource<Source, Return>(
     const store = (globalThis as unknown as AnaemiaGlobal).__ANAEMIA_SERVER_STORAGE__?.getStore?.();
 
     if (store && serverFn.id) {
-      const fnData = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionData | undefined;
+      const fnData = store.get(SERVER_FUNCTION_DATA_KEY) as ServerFunctionData | undefined;
       const fnCache = fnData?.[serverFn.id];
       if (fnCache) {
         const sourceValue = source();

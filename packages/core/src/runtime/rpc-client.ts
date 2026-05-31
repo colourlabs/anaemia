@@ -1,4 +1,5 @@
 import { isServer } from "solid-js/web";
+import { ANAEMIA_DATA_SCRIPT_ID, RPC_PATH, SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
 
 interface CacheMatch {
   matchingKey: string;
@@ -10,7 +11,7 @@ interface ServerFunctionCache {
 }
 
 interface AnaemiaClientCache {
-  __SERVER_FUNCTION_DATA__?: ServerFunctionCache;
+  [SERVER_FUNCTION_DATA_KEY]?: ServerFunctionCache;
 }
 
 interface AnaemiaServerStorage {
@@ -25,7 +26,7 @@ let _clientCache: AnaemiaClientCache | null = null;
 
 function ensureCacheInitialized() {
   if (isServer || _clientCache) return;
-  const script = document.getElementById("__ANAEMIA_DATA__");
+  const script = document.getElementById(ANAEMIA_DATA_SCRIPT_ID);
   try {
     _clientCache = JSON.parse(script?.textContent || "{}") as AnaemiaClientCache;
   } catch {
@@ -56,7 +57,7 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
+        const functionCache = store.get(SERVER_FUNCTION_DATA_KEY) as ServerFunctionCache | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;
@@ -66,7 +67,7 @@ export function $$executeClientRpc(hashId: string) {
     }
 
     ensureCacheInitialized();
-    const serverFunctionData = _clientCache?.__SERVER_FUNCTION_DATA__?.[hashId];
+    const serverFunctionData = _clientCache?.[SERVER_FUNCTION_DATA_KEY]?.[hashId];
     const match = findLooseCacheMatch(serverFunctionData ?? {}, args[0] as string);
     if (match) {
       const { matchingKey, data } = match;
@@ -74,7 +75,7 @@ export function $$executeClientRpc(hashId: string) {
       return data;
     }
 
-    const response = await fetch(`/_rpc?id=${hashId}`, {
+    const response = await fetch(`${RPC_PATH}?id=${hashId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(args),
@@ -88,7 +89,7 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
+        const functionCache = store.get(SERVER_FUNCTION_DATA_KEY) as ServerFunctionCache | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;
@@ -98,7 +99,7 @@ export function $$executeClientRpc(hashId: string) {
     }
 
     ensureCacheInitialized();
-    const serverFunctionData = _clientCache?.__SERVER_FUNCTION_DATA__?.[hashId];
+    const serverFunctionData = _clientCache?.[SERVER_FUNCTION_DATA_KEY]?.[hashId];
     const match = findLooseCacheMatch(serverFunctionData ?? {}, args[0] as string);
     return match ? match.data : undefined;
   };

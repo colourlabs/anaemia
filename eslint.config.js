@@ -7,7 +7,7 @@ import unicorn from "eslint-plugin-unicorn";
 
 export default [
   {
-    // ingore stubs
+    // ignore stubs
     ignores: [
       "dist/**",
       "templates/**",
@@ -37,6 +37,7 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      "no-undef": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
@@ -91,7 +92,11 @@ export default [
     },
   },
   {
-    files: ["packages/core/src/runtime/entry-server.tsx"],
+    files: [
+      "packages/core/src/runtime/entry-server.tsx",
+      "packages/core/src/runtime/server/**/*.ts",
+      "packages/core/src/runtime/server/**/*.tsx",
+    ],
     rules: {
       "no-console": "off",
     },

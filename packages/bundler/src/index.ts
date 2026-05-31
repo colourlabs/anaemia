@@ -5,6 +5,7 @@ import fs from "node:fs";
 import type { AnaemiaConfig } from "@anaemia/core/config";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import pc from "picocolors";
 
 import clientServerFnTransform from "./plugins/babel-transform-server.js";
 import serverHashInjector from "./plugins/babel-hash-injector-server.js";
@@ -20,6 +21,8 @@ import { createStyleRules, createBabelRule, createAssetRules } from "./rules.js"
 import { getClientOptimization, getPerformanceProfile } from "./optimization.js";
 import loadEnvFiles from "./env-loader.js";
 
+import { analyzeApp } from "./analyzer/index.js";
+
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,12 +34,43 @@ export async function getRspackConfig(
   const isDev = process.env.NODE_ENV !== "production";
   loadEnvFiles(appRoot, process.env.NODE_ENV || "development");
 
+  // run the analyzer to collect route metadata and other information about the app that we can use to optimize the build
+  const analysis = await analyzeApp(appRoot, {
+    mode: isDev ? "development" : "production",
+  });
+
+  // flush diagnostics to console
+  const tag = pc.dim("[anaemia-analyzer]");
+
+  for (const diagnostic of analysis.diagnostics) {
+    const prefix =
+      diagnostic.severity === "error"
+        ? pc.red("✖ [error]")
+        : diagnostic.severity === "warning"
+          ? pc.yellow("⚠ [warning]")
+          : pc.cyan("› [info]");
+
+    const loc = diagnostic.line ? pc.dim(`:${diagnostic.line}`) : "";
+    const file = pc.bold(diagnostic.filePath);
+    const msg =
+      diagnostic.severity === "error"
+        ? pc.red(diagnostic.message)
+        : diagnostic.severity === "warning"
+          ? pc.yellow(diagnostic.message)
+          : diagnostic.message;
+
+    // eslint-disable-next-line no-console
+    console.log(`${tag} ${prefix} ${file}${loc} - ${msg}`);
+    // eslint-disable-next-line no-console
+    if (diagnostic.help) console.log(`  ${pc.dim(`hint: ${diagnostic.help}`)}`);
+  }
+
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
   const runtimeDir = path.resolve(coreRuntimeDir, "./dist/runtime");
 
   const routes = await scanRoutes(appRoot);
   const serverRoutes = scanServerRoutes(appRoot);
-  writeManifest(appRoot, routes);
+  writeManifest(appRoot, routes, analysis.routeMetadata);
 
   const frameworkInternalDir = path.resolve(appRoot, "./.anaemia");
   if (!fs.existsSync(frameworkInternalDir)) {
@@ -251,3 +285,11 @@ export async function getRspackConfig(
 
 export { scanRoutes } from "./router/scan.js";
 export { writeManifest } from "./router/manifest.js";
+export { analyzeApp, collectAnalyzerFiles, parseAnalyzerFile, walkAst } from "./analyzer/index.js";
+export type {
+  AnalyzeAppOptions,
+  AnalyzerDiagnostic,
+  AnalyzerFileKind,
+  AnalyzerResult,
+  ParsedAnalyzerFile,
+} from "./analyzer/index.js";

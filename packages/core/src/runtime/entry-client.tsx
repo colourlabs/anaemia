@@ -1,10 +1,11 @@
 import { hydrate, render } from "solid-js/web";
 import { Router } from "@solidjs/router";
+import { ENTRY_SELECTOR } from "./shared/constants.js";
 
 // @ts-expect-error - resolved by Rspack
 import App, { preloadActiveClientRoute } from "anaemia-user-app";
 
-const mountTarget = document.querySelector("[anaemia-entry]") as HTMLElement | null;
+const mountTarget = document.querySelector(ENTRY_SELECTOR) as HTMLElement | null;
 
 if (!mountTarget) {
   throw new Error("[anaemia] missing mount target");

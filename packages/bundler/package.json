@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./analyzer": {
+      "types": "./dist/analyzer/index.d.ts",
+      "default": "./dist/analyzer/index.js"
     }
   },
   "scripts": {
@@ -25,6 +29,8 @@
     "dotenv-expand": "^13.0.0",
     "glob": "^13.0.6",
     "jiti": "^2.7.0",
+    "oxc-parser": "^0.133.0",
+    "picocolors": "^1.1.1",
     "sass": "^1.100.0",
     "sass-loader": "^17.0.0",
     "solid-refresh": "^0.7.8",

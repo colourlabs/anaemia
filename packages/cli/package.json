@@ -1,6 +1,6 @@
 {
   "name": "@anaemia/cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "bin": {
     "anaemia": "./dist/index.js"
   },
@@ -11,8 +11,8 @@
     "test": "pnpm run build && node --test test/*.test.mjs test/commands/*.test.mjs"
   },
   "dependencies": {
-    "@anaemia/bundler": "^0.5.1",
-    "@anaemia/core": "^0.5.1",
+    "@anaemia/bundler": "^0.5.2",
+    "@anaemia/core": "^0.5.2",
     "@rspack/core": "^2.0.5",
     "@rspack/dev-server": "2.0.1",
     "cac": "^7.0.0",

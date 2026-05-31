@@ -7,7 +7,7 @@ export default function loadEnvFiles(appRoot: string, mode: string) {
   const files = [`.env`, `.env.local`, `.env.${mode}`, `.env.${mode}.local`];
 
   for (const file of files) {
-    const result = loadDotenv({ path: path.resolve(appRoot, file), override: true });
+    const result = loadDotenv({ path: path.resolve(appRoot, file), override: true, quiet: true });
     expandDotenv(result);
   }
 }

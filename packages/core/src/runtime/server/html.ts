@@ -3,7 +3,7 @@ import type { ChunkAssets, RouteManifest } from "./types.js";
 
 const ENTRY_TAG_REGEX = /(<([a-zA-Z0-9-]+)[^>]*anaemia-entry[^>]*>)(.*?)(<\/\2>)/is;
 
-export function normalizeAssetUrl(url: unknown): string {
+function normalizeAssetUrl(url: unknown): string {
   if (!url || typeof url !== "string") return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return url.startsWith("/") ? url : `/${url}`;
@@ -49,24 +49,6 @@ export function createDevNoCacheHeadTags(isDev: boolean): string {
   return isDev
     ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n`
     : "";
-}
-
-export function injectHtmlShell(args: {
-  template: string;
-  htmlPayload: string;
-  headInjections: string;
-  bodyInjections: string;
-}): string {
-  const sanitizedPayload = args.htmlPayload.trim();
-
-  let completeHtmlOutput = ENTRY_TAG_REGEX.test(args.template)
-    ? args.template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`)
-    : args.template.replace("</body>", () => `<div ${ENTRY_ATTRIBUTE}>${sanitizedPayload}</div></body>`);
-
-  completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${args.headInjections}`);
-  completeHtmlOutput = completeHtmlOutput.replace("</body>", `${args.bodyInjections}</body>`);
-
-  return completeHtmlOutput;
 }
 
 export function createHtmlStreamShell(args: { template: string; headInjections: string; bodyInjections: string }): {

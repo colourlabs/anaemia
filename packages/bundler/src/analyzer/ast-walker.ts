@@ -6,7 +6,7 @@ export type AstNode = {
   [key: string]: unknown;
 };
 
-export type WalkController = {
+type WalkController = {
   skip: () => void;
 };
 

@@ -1,7 +1,7 @@
 import type { Comment, EcmaScriptModule, OxcError, Program } from "oxc-parser";
 import type { RouteMetadata } from "./checks/route-metadata.js";
 
-export type AnalyzerSeverity = "error" | "warning" | "info";
+type AnalyzerSeverity = "error" | "warning" | "info";
 
 export type AnalyzerDiagnostic = {
   code: string;
@@ -39,7 +39,7 @@ export type AnalyzeAppOptions = {
   include?: string[];
 };
 
-export type AnalyzerBuildInfo = {
+type AnalyzerBuildInfo = {
   mode: string;
   analyzedAt: string;
 };

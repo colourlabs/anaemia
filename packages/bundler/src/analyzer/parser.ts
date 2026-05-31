@@ -54,7 +54,7 @@ function diagnosticFromOxcError(filePath: string, source: string, error: ParserE
   };
 }
 
-export function inferAnalyzerFileKind(appRoot: string, filePath: string): AnalyzerFileKind {
+function inferAnalyzerFileKind(appRoot: string, filePath: string): AnalyzerFileKind {
   const relativePath = path.relative(appRoot, filePath).replace(/\\/g, "/");
 
   if (/^anaemia\.config\.[cm]?[jt]s$/.test(relativePath)) return "config";

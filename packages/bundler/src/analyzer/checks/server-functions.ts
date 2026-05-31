@@ -3,7 +3,7 @@ import { prop, child, children } from "../ast-utils.js";
 import type { AstNode } from "../ast-walker.js";
 import type { AnalyzerDiagnostic, ParsedAnalyzerFile } from "../types.js";
 
-export function collectServerFunctionDefinitions(
+function collectServerFunctionDefinitions(
   files: ParsedAnalyzerFile[],
 ): Map<string, { filePath: string; line?: number }> {
   const definitions = new Map<string, { filePath: string; line?: number }>();
@@ -40,7 +40,7 @@ export function collectServerFunctionDefinitions(
   return definitions;
 }
 
-export function collectServerFunctionImports(files: ParsedAnalyzerFile[]): Set<string> {
+function collectServerFunctionImports(files: ParsedAnalyzerFile[]): Set<string> {
   const imports = new Set<string>();
 
   for (const file of files) {

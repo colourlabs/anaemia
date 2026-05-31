@@ -15,8 +15,11 @@ export function collectServerFunctionDefinitions(
         if (node.type !== "CallExpression") return;
         const callee = child(node, "callee");
         const args = children(node, "arguments");
-
         const idArg = args[1];
+
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!idArg) return;
+
         if (
           callee?.type === "Identifier" &&
           prop<string>(callee, "name") === "runOnServer" &&

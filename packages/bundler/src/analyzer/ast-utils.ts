@@ -15,7 +15,8 @@ export function child(node: AstNode, key: string): AstNode | null {
 export function children(node: AstNode, key: string): AstNode[] {
   const value = (node as Record<string, unknown>)[key];
   if (!Array.isArray(value)) return [];
-  return value.filter((v): v is AstNode =>
-    Boolean(v && typeof v === "object" && typeof (v as AstNode).type === "string"),
+  return value.filter(
+    (v): v is AstNode =>
+      v !== null && v !== undefined && typeof v === "object" && typeof (v as Record<string, unknown>).type === "string",
   );
 }

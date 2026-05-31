@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { RouteMetadata } from "../analysis/checks/route-metadata.js";
+import type { RouteManifestEntry } from "../router/scan.js";
+import type { RouteMetadata } from "../analyzer/checks/route-metadata.js";
 
-export function writeManifest(appRoot: string, routes: Route[], routeMetadata: RouteMetadata[]) {
-  const metadataMap = new Map(routeMetadata.map((m) => [m.filePath, m]));
+export function writeManifest(appRoot: string, routes: RouteManifestEntry[], routeMetadata: RouteMetadata[]) {
+  const metadataMap = new Map(routeMetadata.map((m) => [path.resolve(appRoot, m.filePath), m]));
 
   const manifest = {
     routes: routes.map((route) => {
-      const meta = metadataMap.get(route.relativePath);
+      const meta = metadataMap.get(route.filePath);
       return {
         ...route,
         isStatic: meta?.isStatic ?? false,

@@ -52,11 +52,18 @@ export function createManifestStore(env: RuntimeEnv) {
     memoizedSortedRoutes = memoizedManifest ? sortRoutes(memoizedManifest.routes) : [];
   };
 
-  const getSnapshot = (): ManifestSnapshot => ({
-    template: memoizedHtmlTemplate,
-    manifest: memoizedManifest,
-    sortedRoutes: memoizedSortedRoutes,
-  });
+  const getSnapshot = (): ManifestSnapshot => {
+    const routes = memoizedManifest?.routes ?? [];
+
+    return {
+      template: memoizedHtmlTemplate,
+      manifest: memoizedManifest,
+      sortedRoutes: memoizedSortedRoutes,
+      staticRoutes: new Set(routes.filter((r) => r.isStatic).map((r) => r.urlPattern)),
+      loaderRoutes: new Set(routes.filter((r) => r.hasLoader).map((r) => r.urlPattern)),
+      guardRoutes: new Set(routes.filter((r) => r.hasGuard).map((r) => r.urlPattern)),
+    };
+  };
 
   return { load, getSnapshot };
 }

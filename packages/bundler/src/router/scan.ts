@@ -205,7 +205,6 @@ function resolveLayoutChain(dir: string, layoutMap: Map<string, LayoutManifestEn
   const layouts: LayoutManifestEntry[] = [];
   let current = dir;
 
-  
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
     const layoutEntry = layoutMap.get(current);

@@ -33,7 +33,7 @@ export default [
     plugins: {
       "@typescript-eslint": tsPlugin,
       "unused-imports": unusedImports,
-      "unicorn": unicorn,
+      unicorn: unicorn,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
@@ -47,8 +47,8 @@ export default [
       "@typescript-eslint/switch-exhaustiveness-check": "error",
       "unicorn/prefer-node-protocol": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
-      "eqeqeq": ["error", "always", { null: "ignore" }],
-      "no-param-reassign": "error", 
+      eqeqeq: ["error", "always", { null: "ignore" }],
+      "no-param-reassign": "error",
       "prefer-const": "error",
       "unicorn/no-array-for-each": "error",
       "unicorn/no-await-expression-member": "error",

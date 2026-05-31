@@ -35,7 +35,7 @@ function ensureCacheInitialized() {
 
 function findLooseCacheMatch(
   serverFunctionData: Record<string, unknown> | null | undefined,
-  targetArg: string
+  targetArg: string,
 ): CacheMatch | undefined {
   if (!serverFunctionData) return undefined;
   const strictKey = JSON.stringify([targetArg]);

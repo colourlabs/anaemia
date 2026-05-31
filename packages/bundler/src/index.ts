@@ -1,4 +1,4 @@
-import type { Configuration} from "@rspack/core";
+import type { Configuration } from "@rspack/core";
 import { rspack } from "@rspack/core";
 import path from "node:path";
 import fs from "node:fs";

@@ -351,10 +351,10 @@ app.get("*", async (c) => {
     }
     if (chunk.css) {
       const cssSpecs = Array.isArray(chunk.css) ? chunk.css : [chunk.css];
-      
+
       for (const cssFile of cssSpecs) {
         assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(cssFile)}">\n`;
-      }  
+      }
     }
   };
 

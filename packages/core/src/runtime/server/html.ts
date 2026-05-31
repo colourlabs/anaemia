@@ -30,7 +30,7 @@ function chunkAssetTags(chunk: ChunkAssets | undefined): { scripts: string; styl
 }
 
 export function getRouteAssetTags(manifest: RouteManifest, activeChunk: string): { scripts: string; styles: string } {
-  const chunkNames = ["client", "commons", "vendors"];
+  const chunkNames = ["client", "framework", "commons", "vendors"];
   if (activeChunk && activeChunk !== "client") chunkNames.push(activeChunk);
 
   return chunkNames.reduce(

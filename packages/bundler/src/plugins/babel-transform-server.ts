@@ -28,16 +28,13 @@ export default function clientServerFnTransform({ types: t }: { types: typeof Ba
           state.hasRunOnServer = true;
           const filename = state.file.opts.filename || "unknown";
 
-          const serverFunctionCallback = path.node.arguments[0];
           const explicitId = path.node.arguments[1];
 
           const functionHash = t.isStringLiteral(explicitId)
             ? explicitId.value
             : createServerFunctionId(filename, path.node.start);
 
-          if (serverFunctionCallback) {
-            path.get('arguments.0').remove();
-          }
+          path.get('arguments.0').remove();
 
           // this whole thing is just magic bro
           // wtf is this ast manipulation

@@ -3,6 +3,7 @@ import globals from "globals";
 import unusedImports from "eslint-plugin-unused-imports";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import unicorn from "eslint-plugin-unicorn";
 
 export default [
   {
@@ -32,12 +33,28 @@ export default [
     plugins: {
       "@typescript-eslint": tsPlugin,
       "unused-imports": unusedImports,
+      "unicorn": unicorn,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+      "@typescript-eslint/no-unnecessary-condition": "warn",
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "unicorn/prefer-node-protocol": "error",
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "eqeqeq": ["error", "always", { null: "ignore" }],
+      "no-param-reassign": "error", 
+      "prefer-const": "error",
+      "unicorn/no-array-for-each": "error",
+      "unicorn/no-await-expression-member": "error",
+      "unicorn/prefer-logical-operator-over-ternary": "error",
+      "unicorn/no-useless-undefined": "error",
+      "unicorn/prefer-array-flat-map": "error",
       "unused-imports/no-unused-vars": [
         "warn",
         {
@@ -63,6 +80,20 @@ export default [
     files: ["packages/core/src/runtime/**/*.ts", "packages/core/src/runtime/**/*.tsx"],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
+    },
+  },
+
+  // allow console in certain files
+  {
+    files: ["packages/cli/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["packages/core/src/runtime/entry-server.tsx"],
+    rules: {
+      "no-console": "off",
     },
   },
 

@@ -2,8 +2,8 @@ import { rspack } from "@rspack/core";
 
 export function getClientOptimization(isDev: boolean) {
   return {
-    sideEffects: true,
-    usedExports: true,
+    sideEffects: !isDev,
+    usedExports: !isDev,
     splitChunks: isDev
       ? (false as const)
       : ({
@@ -14,7 +14,7 @@ export function getClientOptimization(isDev: boolean) {
             framework: {
               chunks: "all" as const,
               name: "framework",
-              test: /[\\/]node_modules[\\/](solid-js|@solidjs[\\/]router)[\\/]/,
+              test: /[\\/]node_modules[\\/](solid-js|@solidjs)[\\/]/,
               priority: 40,
               enforce: true,
             },
@@ -26,7 +26,20 @@ export function getClientOptimization(isDev: boolean) {
             },
           },
         } as const),
-    minimizer: isDev ? [] : [new rspack.SwcJsMinimizerRspackPlugin()],
+    minimizer: isDev
+      ? []
+      : [
+          new rspack.SwcJsMinimizerRspackPlugin({
+            minimizerOptions: {
+              mangle: {
+                keep_fnames: true,
+              },
+              compress: {
+                keep_fnames: true,
+              },
+            },
+          }),
+        ],
   };
 }
 

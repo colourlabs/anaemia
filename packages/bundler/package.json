@@ -21,6 +21,8 @@
     "@rspack/core": "^2.0.5",
     "babel-loader": "^10.1.1",
     "babel-preset-solid": "^1.9.12",
+    "dotenv": "^17.4.2",
+    "dotenv-expand": "^13.0.0",
     "glob": "^13.0.6",
     "jiti": "^2.7.0",
     "sass": "^1.100.0",

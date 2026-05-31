@@ -45,6 +45,14 @@ export interface AnaemiaConfig {
   styles?: {
     sass?: boolean;
     modules?: boolean;
+
+    /**
+     * customize the generated CSS module class names.
+     * defaults to "[name]__[local]__[hash:base64:5]" in both development and production
+     * for readable, themeable class names. Set to "[hash:base64:8]" if you prefer
+     * fully hashed production output and don't need external theme support.
+     */
+    modulesLocalIdentName?: string;
   };
   experimental?: {
     outputModule?: boolean;

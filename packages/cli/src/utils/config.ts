@@ -1,6 +1,6 @@
-import { AnaemiaConfig } from "@anaemia/core/config";
-import path from "path";
-import fs from "fs";
+import type { AnaemiaConfig } from "@anaemia/core/config";
+import path from "node:path";
+import fs from "node:fs";
 import { createJiti } from "jiti";
 import logger from "./logger.js";
 

@@ -7,7 +7,7 @@ import { renderToStringAsync, generateHydrationScript } from "solid-js/web";
 import { Router } from "@solidjs/router";
 import { ssrStorage, serverFunctionsRegistry } from "./context.js";
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 import type { StatusCode, RedirectStatusCode } from "hono/utils/http-status";
 
 // @ts-expect-error - resolved by Rspack
@@ -256,8 +256,8 @@ function matchRoute(manifest: RouteManifest, reqPath: string): RouteMatch {
 app.get("*", async (c) => {
   if (isDev) await loadManifestAndTemplate();
 
-  let template = memoizedHtmlTemplate;
-  let manifest = memoizedManifest;
+  const template = memoizedHtmlTemplate;
+  const manifest = memoizedManifest;
 
   if (!template || !manifest) {
     return c.text("anaemia engine error: build assets are missing", 500);
@@ -340,28 +340,28 @@ app.get("*", async (c) => {
   let assetScripts = "";
   let assetStyles = "";
 
-  if (manifest.chunks) {
-    const processChunkAssets = (chunk: ChunkAssets | undefined) => {
-      if (!chunk) return;
-      if (chunk.js) {
-        const jsSpecs = Array.isArray(chunk.js) ? chunk.js : [chunk.js];
-        jsSpecs.forEach((jsFile: string) => {
-          assetScripts += `<script type="module" src="${normalizeAssetUrl(jsFile)}"></script>\n`;
-        });
-      }
-      if (chunk.css) {
-        const cssSpecs = Array.isArray(chunk.css) ? chunk.css : [chunk.css];
-        cssSpecs.forEach((cssFile: string) => {
-          assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(cssFile)}">\n`;
-        });
-      }
-    };
+  const processChunkAssets = (chunk: ChunkAssets | undefined) => {
+    if (!chunk) return;
+    if (chunk.js) {
+      const jsSpecs = Array.isArray(chunk.js) ? chunk.js : [chunk.js];
 
-    processChunkAssets(manifest.chunks["client"]);
-    if (manifest.chunks["commons"]) processChunkAssets(manifest.chunks["commons"]);
-    if (manifest.chunks["vendors"]) processChunkAssets(manifest.chunks["vendors"]);
-    if (activeChunk && activeChunk !== "client") processChunkAssets(manifest.chunks[activeChunk]);
-  }
+      for (const jsFile of jsSpecs) {
+        assetScripts += `<script type="module" src="${normalizeAssetUrl(jsFile)}"></script>\n`;
+      }
+    }
+    if (chunk.css) {
+      const cssSpecs = Array.isArray(chunk.css) ? chunk.css : [chunk.css];
+      
+      for (const cssFile of cssSpecs) {
+        assetStyles += `<link rel="stylesheet" href="${normalizeAssetUrl(cssFile)}">\n`;
+      }  
+    }
+  };
+
+  processChunkAssets(manifest.chunks["client"]);
+  processChunkAssets(manifest.chunks["commons"]);
+  processChunkAssets(manifest.chunks["vendors"]);
+  if (activeChunk && activeChunk !== "client") processChunkAssets(manifest.chunks[activeChunk]);
 
   const hydrationScript = generateHydrationScript();
   const rawStorePayload = Object.fromEntries(store);

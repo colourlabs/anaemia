@@ -9,7 +9,7 @@ import { WebSocketServer } from "ws";
 import { WebSocket as NodeWS } from "ws";
 import { loadUserConfig } from "../utils/config.js";
 import logger from "../utils/logger.js";
-import { ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { flattenWsMessage } from "../utils/flatten-ws-message.js";
 
 export function register(cli: CAC) {
@@ -75,15 +75,13 @@ export function register(cli: CAC) {
         serverProcess = null;
       }
       bridgeServer.close();
-      serverCompiler?.close(() => {});
-      if (devServer) {
-        await devServer.stop();
-      }
+      serverCompiler.close(() => {});
+      await devServer.stop();
       process.exit(0);
     };
 
-    process.on("SIGINT", cleanup);
-    process.on("SIGTERM", cleanup);
+    process.on("SIGINT", () => void cleanup());
+    process.on("SIGTERM", () => void cleanup());
 
     logger.compiler("warming up and analyzing assets...");
 

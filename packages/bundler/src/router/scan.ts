@@ -1,5 +1,5 @@
 import { glob } from "glob";
-import path from "path";
+import path from "node:path";
 import { createJiti } from "jiti";
 import fs from "node:fs";
 import { getAliases } from "../aliases.js";
@@ -90,7 +90,7 @@ export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]>
 
       try {
         const layoutModule = (await jiti.import(resolveConfigPath(absolutePath))) as RouteModule;
-        if (layoutModule?.config?.guards) {
+        if (layoutModule.config?.guards) {
           layoutGuards = layoutModule.config.guards;
         }
       } catch {
@@ -120,7 +120,7 @@ export async function scanRoutes(appRoot: string): Promise<RouteManifestEntry[]>
 
     try {
       const pageModule = (await jiti.import(resolveConfigPath(absolutePagePath))) as RouteModule;
-      if (pageModule?.config?.guards) {
+      if (pageModule.config?.guards) {
         pageGuards = pageModule.config.guards;
       }
     } catch {
@@ -205,6 +205,8 @@ function resolveLayoutChain(dir: string, layoutMap: Map<string, LayoutManifestEn
   const layouts: LayoutManifestEntry[] = [];
   let current = dir;
 
+  
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
     const layoutEntry = layoutMap.get(current);
     if (layoutEntry) layouts.unshift(layoutEntry);

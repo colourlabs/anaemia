@@ -1,5 +1,6 @@
-import { Configuration, rspack } from "@rspack/core";
-import path from "path";
+import type { Configuration} from "@rspack/core";
+import { rspack } from "@rspack/core";
+import path from "node:path";
 import fs from "node:fs";
 import type { AnaemiaConfig } from "@anaemia/core/config";
 import { createRequire } from "node:module";
@@ -15,8 +16,9 @@ import { generateRouterEntry } from "./router/generate-entry.js";
 import { generateServerRoutes } from "./router/generate-server-routes.js";
 import { getAliases } from "./aliases.js";
 
-import { createStyleRules, createBabelRule } from "./rules.js";
+import { createStyleRules, createBabelRule, createAssetRules } from "./rules.js";
 import { getClientOptimization, getPerformanceProfile } from "./optimization.js";
+import loadEnvFiles from "./env-loader.js";
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +29,8 @@ export async function getRspackConfig(
   config: AnaemiaConfig = {},
 ): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
-  const rawEnv = process.env;
+  loadEnvFiles(appRoot, process.env.NODE_ENV || "development");
+
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
   const runtimeDir = path.resolve(coreRuntimeDir, "./dist/runtime");
 
@@ -40,21 +43,34 @@ export async function getRspackConfig(
     fs.mkdirSync(frameworkInternalDir, { recursive: true });
   }
 
+  // bootstrap config entries and generate necessary files for the router based on the scanned routes
   const entryFile = generateRouterEntry(appRoot, routes);
   const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
+
   const styleRules = createStyleRules(config);
+  const assetRules = createAssetRules(isDev);
+
+  // allow users to inject additional babel plugins via the config, which is useful for things like macros or other code transforms that need to run at compile time
   const extraClientBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
   const extraServerBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
   const solidRefreshPlugin = [require.resolve("solid-refresh/babel"), { bundler: "rspack-esm", jsx: false }];
 
-  // env processing
+  /**
+   * env processing:
+   *
+   * - we inject some default env vars like MODE, DEV, and PROD for convenience
+   * - for the server, we expose all env vars
+   * - for the client, we only expose vars that start with PUBLIC_, as well as the same defaults
+   * - users can also define additional compile-time constants via config.define.client and config.define.server, which are merged into the rspack DefinePlugin config
+   */
   const serverEnv: Record<string, string> = {
     MODE: JSON.stringify(process.env.NODE_ENV || "development"),
     DEV: JSON.stringify(isDev),
     PROD: JSON.stringify(!isDev),
   };
-  for (const key in rawEnv) {
-    serverEnv[key] = JSON.stringify(rawEnv[key]);
+
+  for (const key in process.env) {
+    serverEnv[key] = JSON.stringify(process.env[key]);
   }
 
   const clientEnv: Record<string, string> = {
@@ -62,18 +78,22 @@ export async function getRspackConfig(
     DEV: JSON.stringify(isDev),
     PROD: JSON.stringify(!isDev),
   };
-  for (const key in rawEnv) {
+
+  for (const key in process.env) {
     if (key.startsWith("PUBLIC_")) {
-      clientEnv[key] = JSON.stringify(rawEnv[key]);
+      clientEnv[key] = JSON.stringify(process.env[key]);
     }
   }
 
+  // shared resolve config
+  // we set up some shared resolve config between client and server here, like extension aliases and path aliases
   const sharedResolve = {
     extensions: [".tsx", ".ts", ".jsx", ".js", ".json", ".scss", ".css"],
     extensionAlias: { ".js": [".ts", ".js"], ".jsx": [".tsx", ".jsx"] },
     alias: { "anaemia-user-app": entryFile, ...getAliases(appRoot) },
   };
 
+  // client and server configurations
   let clientConfig: Configuration = {
     name: "client",
     context: appRoot,
@@ -155,6 +175,7 @@ export async function getRspackConfig(
       parser: { "css/auto": { namedExports: false } },
       rules: [
         styleRules.client,
+        ...assetRules.client,
         {
           ...createBabelRule({
             isServer: false,
@@ -202,6 +223,7 @@ export async function getRspackConfig(
       parser: { "css/auto": { namedExports: false } },
       rules: [
         styleRules.server,
+        ...assetRules.server,
         {
           ...createBabelRule({
             isServer: true,
@@ -218,6 +240,7 @@ export async function getRspackConfig(
     },
   };
 
+  // allow plugins to modify the client and server configurations before they are returned
   for (const plugin of config.plugins ?? []) {
     if (plugin.clientRspackConfig) clientConfig = plugin.clientRspackConfig(clientConfig);
     if (plugin.serverRspackConfig) serverConfig = plugin.serverRspackConfig(serverConfig);

@@ -19,7 +19,7 @@ export function scaffoldFeature(rawName: string, appRoot: string) {
     path.join(featureDir, "server"),
   ];
 
-  directories.forEach((dir) => fs.mkdirSync(dir, { recursive: true }));
+  for (const dir of directories) fs.mkdirSync(dir, { recursive: true });
 
   const componentContent = isTypeScript
     ? `import type { JSX } from "solid-js";

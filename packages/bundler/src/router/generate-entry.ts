@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import type { RouteManifestEntry } from "./scan.js";
 import { transform } from "sucrase";
 
@@ -101,7 +101,7 @@ function renderTree(nodes: TreeNode[], indent = 6): string {
         return `${pad}<Route path="${routePath}" component={Route${node.routeIdx}Wrapped} />`;
       }
 
-      let layoutPath = node.relativePath;
+      const layoutPath = node.relativePath;
       const inner = renderTree(node.children, indent + 2);
 
       return [`${pad}<Route path="${layoutPath}" component={Layout${node.layoutIdx}}>`, inner, `${pad}</Route>`].join(

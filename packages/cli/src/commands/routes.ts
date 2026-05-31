@@ -10,7 +10,7 @@ export function register(cli: CAC) {
 
     logger.info("scanned route architecture:\n");
 
-    routes.forEach((r, i) => {
+    for (const [i, r] of routes.entries()) {
       const isLast = i === routes.length - 1;
       const branch = isLast ? "└─" : "├─";
       const indent = isLast ? "   " : "│  ";
@@ -28,12 +28,12 @@ export function register(cli: CAC) {
       if (r.chunkName) lines.push(`chunk:  ${pc.dim(r.chunkName)}`);
       if (r.layouts.length) lines.push(`layouts: ${pc.dim(String(r.layouts.length))}`);
 
-      lines.forEach((line, li) => {
+      for (const [li, line] of lines.entries()) {
         const isLastLine = li === lines.length - 1;
         console.log(`${indent}${isLastLine ? "└─" : "├─"} ${line}`);
-      });
+      }
 
       if (!isLast) console.log("│");
-    });
+    }
   });
 }

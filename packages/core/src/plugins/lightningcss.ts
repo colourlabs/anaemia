@@ -27,7 +27,7 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
       const isProd = process.env.NODE_ENV === "production";
 
       if (config.module?.rules) {
-        config.module.rules.forEach((rule) => {
+        for (const rule of config.module.rules) {
           if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
 
@@ -42,7 +42,7 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
               },
             ];
           }
-        });
+        }
       }
 
       if (isProd) {
@@ -63,7 +63,7 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
 
     serverRspackConfig(config) {
       if (config.module?.rules) {
-        config.module.rules.forEach((rule) => {
+        for (const rule of config.module.rules) {
           if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
 
@@ -78,7 +78,7 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
               },
             ];
           }
-        });
+        }
       }
       return config;
     },

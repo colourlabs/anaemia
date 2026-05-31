@@ -1,7 +1,7 @@
 import type { CAC } from "cac";
 import { loadUserConfig } from "../utils/config.js";
 import spawn from "cross-spawn";
-import path from "path";
+import path from "node:path";
 
 export function register(cli: CAC) {
   cli.command("start", "serve the production build").action(async () => {

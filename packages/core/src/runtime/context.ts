@@ -7,7 +7,7 @@ export const ssrStorage = new AsyncLocalStorage<Map<string, unknown>>();
 (globalThis as unknown as Record<string, unknown>).__ANAEMIA_SERVER_STORAGE__ = ssrStorage;
 
 export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { id: string } {
-  const hashId = id || "";
+  const hashId = id ?? crypto.randomUUID();
   serverFunctionsRegistry.set(hashId, backendFn);
 
   const rpcProxy = async function (...args: unknown[]) {
@@ -17,7 +17,7 @@ export function runOnServer<T extends AnyFn>(backendFn: T, id?: string): T & { i
       if (!store.has("__SERVER_FUNCTION_DATA__")) {
         store.set("__SERVER_FUNCTION_DATA__", {});
       }
-      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<string, Record<string, unknown>>;
+      const functionCache = store.get("__SERVER_FUNCTION_DATA__") as Record<string, Record<string, unknown> | undefined>;
       if (!functionCache[hashId]) {
         functionCache[hashId] = {};
       }

@@ -33,7 +33,10 @@ function ensureCacheInitialized() {
   }
 }
 
-function findLooseCacheMatch(serverFunctionData: Record<string, unknown>, targetArg: string): CacheMatch | undefined {
+function findLooseCacheMatch(
+  serverFunctionData: Record<string, unknown> | null | undefined,
+  targetArg: string
+): CacheMatch | undefined {
   if (!serverFunctionData) return undefined;
   const strictKey = JSON.stringify([targetArg]);
   if (strictKey in serverFunctionData) {
@@ -59,7 +62,7 @@ export function $$executeClientRpc(hashId: string) {
           if (match) return match.data;
         }
       }
-      return undefined;
+      return;
     }
 
     ensureCacheInitialized();
@@ -91,7 +94,7 @@ export function $$executeClientRpc(hashId: string) {
           if (match) return match.data;
         }
       }
-      return undefined;
+      return;
     }
 
     ensureCacheInitialized();

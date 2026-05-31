@@ -32,11 +32,11 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
           const files = Array.from(chunk.files);
 
           const jsFiles = files.filter(
-            (f) => f.endsWith(".js") && !f.includes(".hot-update.") && !f.endsWith(".js.map")
+            (f) => f.endsWith(".js") && !f.includes(".hot-update.") && !f.endsWith(".js.map"),
           );
 
           const cssFiles = files.filter(
-            (f) => f.endsWith(".css") && !f.includes(".hot-update.") && !f.endsWith(".css.map")
+            (f) => f.endsWith(".css") && !f.includes(".hot-update.") && !f.endsWith(".css.map"),
           );
 
           if (jsFiles.length > 0 || cssFiles.length > 0) {

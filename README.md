@@ -6,11 +6,11 @@ a work in progress high-performance SolidJS SSR framework built for large codeba
 
 ## the problem:
 
-- bojanSocial's web frontend is comprised with tons of components (100+) and over 100,000 lines of code. This is an issue with Vite's ES module based system due to fact it has to load tons of JavaScript for the initial page load. We wanted to move away from the issues of SPA while benefiting with hybrid rendering so we can focus on app speed and SEO 
+- bojanSocial's web frontend is comprised with tons of components (100+) and over 100,000 lines of code. This is an issue with Vite's ES module based system due to fact it has to load tons of JavaScript for the initial page load. We wanted to move away from the issues of SPA while benefiting with hybrid rendering so we can focus on app speed and SEO
 
 - We abuse CSS modules (a ton) - every page on bojanSocial uses CSS modules with SCSS so we needed first class support for it. Our entire styling is custom and complex to achieve the look we want.
 
-- We are terrible at making maintainable codebases and remembering how to structure them without turning into a mess, so we get the computer and our past selves to it for us ;) 
+- We are terrible at making maintainable codebases and remembering how to structure them without turning into a mess, so we get the computer and our past selves to it for us ;)
 
 This is pretty bad as the browser has to send tons of requests just to get a home page. This is the network-dependency tree just for the index page alone on desktop (with lazy-loading). The home page where most of our users use the application is another thing all together
 
@@ -40,13 +40,14 @@ Unlike un-opinionated frameworks, anaemia enforces a rock-solid domain architect
 
 anaemia comes with a plugin API that allows anyone to mold the framework to whatever they want it to be, there is already bundled in [LightningCSS](https://lightningcss.dev/) support with `anaemiaLightningCssPlugin` in `@anaemia/core/plugins`.
 
-This means you can customize the Rspack bundle configuration to whatever your needs need it to be and transform server HTML before it's sent to the user.  
+This means you can customize the Rspack bundle configuration to whatever your needs need it to be and transform server HTML before it's sent to the user.
 
 ---
 
 ## quick start
 
 ### 1. scaffold a New Project
+
 Run the initialization wizard via your node package manager:
 
 ```bash

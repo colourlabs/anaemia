@@ -27,9 +27,7 @@ export function convertTypeScriptToJs(dir: string): void {
         production: true,
       });
 
-      const cleaned = compiled.code
-        .replace(/\n{3,}/g, "\n\n")
-        .trimStart();
+      const cleaned = compiled.code.replace(/\n{3,}/g, "\n\n").trimStart();
 
       const newPath = fullPath.replace(/\.tsx?$/, isTsx ? ".jsx" : ".js");
       fs.writeFileSync(newPath, cleaned, "utf8");

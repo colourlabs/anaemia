@@ -96,4 +96,3 @@ anaemia allows seamless execution of server-side logic inside client components 
 2. deterministic targeting: using code mapping variables (file path + token character position), a cryptographic hash is mapped to the entry location.
 
 3. network synthesis: the function is rewritten to use `@anaemia/core`'s internal HTTP payload manager (`$$executeClientRpc`). when invoked in the browser, it seamlessly triggers an automated POST request containing the arguments payload targeting the specific function hash.
-

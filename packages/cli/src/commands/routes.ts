@@ -15,7 +15,12 @@ export function register(cli: CAC) {
       const branch = isLast ? "└─" : "├─";
       const indent = isLast ? "   " : "│  ";
 
-      const typeLabel = r.type === "catch-all" ? pc.red(`[${r.type}]`) : r.type === "layout" ? pc.yellow(`[${r.type}]`) : pc.green(`[${r.type}]`);
+      const typeLabel =
+        r.type === "catch-all"
+          ? pc.red(`[${r.type}]`)
+          : r.type === "layout"
+            ? pc.yellow(`[${r.type}]`)
+            : pc.green(`[${r.type}]`);
       console.log(`${branch} ${pc.cyan(r.urlPattern)} ${typeLabel}`);
 
       const lines: string[] = [];

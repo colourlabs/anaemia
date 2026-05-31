@@ -9,6 +9,6 @@ export default defineConfig({
   plugins: [
     anaemiaLightningCssPlugin({
       browserslist: ["last 2 versions"],
-    })
-  ]
+    }),
+  ],
 });

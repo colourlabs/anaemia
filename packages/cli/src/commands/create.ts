@@ -3,7 +3,12 @@ import logger from "../utils/logger.js";
 import path from "node:path";
 import fs from "node:fs";
 import pc from "picocolors";
-import { generateSharedComponent, scaffoldFeature, scaffoldHook, scaffoldPage } from "../scaffold.js";
+import {
+  generateSharedComponent,
+  scaffoldFeature,
+  scaffoldHook,
+  scaffoldPage,
+} from "../scaffold.js";
 import prompts from "prompts";
 import { fileURLToPath } from "node:url";
 import { fetchTemplate } from "../utils/fetch-template.js";
@@ -14,7 +19,10 @@ const __dirname = path.dirname(__filename);
 
 export function register(cli: CAC) {
   cli
-    .command("create [target]", "initialize an application or generate domain features (e.g., feature:name)")
+    .command(
+      "create [target]",
+      "initialize an application or generate domain features (e.g., feature:name)",
+    )
     .alias("init")
     .action(async (target) => {
       const appRoot = process.cwd();
@@ -23,12 +31,16 @@ export function register(cli: CAC) {
         const [type, name] = target.split(":");
 
         if (!name) {
-          logger.error(`missing name modifier. Use layout template like: ${pc.cyan(`create ${type}:your-name`)}`);
+          logger.error(
+            `missing name modifier. Use layout template like: ${pc.cyan(`create ${type}:your-name`)}`,
+          );
           process.exit(1);
         }
 
         if (!fs.existsSync(path.join(appRoot, "package.json"))) {
-          logger.error("no package.json detected. code generation commands must run inside an Anaemia project root.");
+          logger.error(
+            "no package.json detected. code generation commands must run inside an Anaemia project root.",
+          );
           process.exit(1);
         }
 
@@ -54,7 +66,9 @@ export function register(cli: CAC) {
           return;
         }
 
-        logger.error(`unknown layout generator type "${type}". Supported variants: "feature:", "component:", "page:", "hook:"`);
+        logger.error(
+          `unknown layout generator type "${type}". Supported variants: "feature:", "component:", "page:", "hook:"`,
+        );
         process.exit(1);
       }
 
@@ -116,7 +130,8 @@ export function register(cli: CAC) {
         logger.info("unpacking local template...");
         fs.cpSync(templatePath, targetPath, {
           recursive: true,
-          filter: (src) => !["node_modules", "dist", ".anaemia", ".rspack"].includes(path.basename(src)),
+          filter: (src) =>
+            !["node_modules", "dist", ".anaemia", ".rspack"].includes(path.basename(src)),
         });
       } else {
         logger.info("fetching template from remote registry...");

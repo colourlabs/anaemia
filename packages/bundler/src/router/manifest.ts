@@ -23,7 +23,7 @@ export function writeManifest(appRoot: string, routes: RouteManifestEntry[]): vo
   }
 
   const conventionalRoutes = routes.filter(
-    (r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx")
+    (r) => !r.filePath.endsWith("404.tsx") && !r.filePath.endsWith("500.tsx"),
   );
 
   const manifest: BuildManifest = {
@@ -35,8 +35,5 @@ export function writeManifest(appRoot: string, routes: RouteManifestEntry[]): vo
 
   const outDir = path.resolve(appRoot, "./dist");
   fs.mkdirSync(outDir, { recursive: true });
-  fs.writeFileSync(
-    path.resolve(outDir, "route-manifest.json"),
-    JSON.stringify(manifest, null, 2)
-  );
+  fs.writeFileSync(path.resolve(outDir, "route-manifest.json"), JSON.stringify(manifest, null, 2));
 }

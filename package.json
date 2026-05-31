@@ -1,9 +1,16 @@
 {
   "name": "anaemia",
-  "type": "module",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "description": "a high-performance SolidJS SSR framework built for large projects",
+  "keywords": [
+    "rspack",
+    "solidjs",
+    "ssr"
+  ],
+  "license": "ISC",
+  "author": "colourlabs",
+  "type": "module",
   "scripts": {
     "build": "pnpm --filter @anaemia/* --filter !@anaemia/template-base build",
     "typecheck": "tsc --noEmit",
@@ -15,16 +22,10 @@
     "release": "node scripts/release.js",
     "release:patch": "node scripts/release.js --patch",
     "release:dry": "node scripts/release.js --dry-run",
-    "release:patch:dry": "node scripts/release.js --patch --dry-run"
+    "release:patch:dry": "node scripts/release.js --patch --dry-run",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
-  "keywords": [
-    "ssr",
-    "rspack",
-    "solidjs"
-  ],
-  "author": "colourlabs",
-  "license": "ISC",
-  "packageManager": "pnpm@10.11.0",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
@@ -34,9 +35,11 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
     "knip": "^6.14.2",
+    "oxfmt": "^0.52.0",
     "solid-js": "^1.9.13",
     "typescript": "^6.0.3"
   },
+  "packageManager": "pnpm@10.11.0",
   "pnpm": {
     "overrides": {
       "@rspack/core": "^2.0.5",

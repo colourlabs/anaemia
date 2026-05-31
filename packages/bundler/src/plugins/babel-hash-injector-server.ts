@@ -1,7 +1,11 @@
 import { createServerFunctionId } from "../server-function-id.js";
 import type { NodePath, PluginPass, types as BabelTypes, PluginObj } from "@babel/core";
 
-export default function serverHashInjector({ types: t }: { types: typeof BabelTypes }): PluginObj<PluginPass> {
+export default function serverHashInjector({
+  types: t,
+}: {
+  types: typeof BabelTypes;
+}): PluginObj<PluginPass> {
   return {
     name: "anaemia-server-hash-injector",
     visitor: {

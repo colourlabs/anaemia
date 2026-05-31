@@ -15,7 +15,9 @@ test("dev client config keeps solid-refresh from rewriting generated JSX islands
     const [clientConfig] = await getRspackConfig(appRoot, { port: 4444 });
     const rules = clientConfig.module.rules;
     const plugins = rules.flatMap((rule) => rule.use?.[0]?.options?.plugins ?? []);
-    const solidRefresh = plugins.find((plugin) => Array.isArray(plugin) && String(plugin[0]).includes("solid-refresh"));
+    const solidRefresh = plugins.find(
+      (plugin) => Array.isArray(plugin) && String(plugin[0]).includes("solid-refresh"),
+    );
 
     assert.ok(solidRefresh);
     assert.equal(solidRefresh[1].bundler, "rspack-esm");

@@ -15,12 +15,14 @@ const source = `
 `;
 
 function transform(plugin) {
-  return transformSync(source, {
-    filename,
-    plugins: [plugin],
-    configFile: false,
-    babelrc: false,
-  })?.code ?? "";
+  return (
+    transformSync(source, {
+      filename,
+      plugins: [plugin],
+      configFile: false,
+      babelrc: false,
+    })?.code ?? ""
+  );
 }
 
 test("client and server transforms generate the same server function id", () => {
@@ -42,36 +44,37 @@ test("client transform forwards call arguments to the RPC wrapper", () => {
 });
 
 test("client transform preserves explicit server function ids", () => {
-  const code = transformSync(
-    `
+  const code =
+    transformSync(
+      `
       import { runOnServer } from "@anaemia/core";
       export const ping = runOnServer(async () => "pong", "custom-id");
     `,
-    {
-      filename,
-      plugins: [clientServerFnTransform],
-      configFile: false,
-      babelrc: false,
-    }
-  )?.code ?? "";
+      {
+        filename,
+        plugins: [clientServerFnTransform],
+        configFile: false,
+        babelrc: false,
+      },
+    )?.code ?? "";
 
   assert.match(code, /\$\$executeClientRpc\("custom-id"\)/);
 });
 
 test("should guarantee server-side logic never leaks to client assets", async () => {
   const clientAssetDir = path.resolve(process.cwd(), "dist/client/assets");
-  
+
   if (!fs.existsSync(clientAssetDir)) return;
 
-  const files = fs.readdirSync(clientAssetDir).filter(f => f.endsWith(".js"));
+  const files = fs.readdirSync(clientAssetDir).filter((f) => f.endsWith(".js"));
 
   for (const file of files) {
     const content = fs.readFileSync(path.join(clientAssetDir, file), "utf-8");
-    
+
     assert.equal(
-      content.includes("SELECT * FROM users"), 
-      false, 
-      `CRITICAL SECURITY LEAK: server logic found inside client asset: ${file}`
+      content.includes("SELECT * FROM users"),
+      false,
+      `CRITICAL SECURITY LEAK: server logic found inside client asset: ${file}`,
     );
   }
 });

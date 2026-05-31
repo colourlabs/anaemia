@@ -1,8 +1,8 @@
 {
   "name": "@anaemia/template-base",
   "version": "1.0.0",
-  "type": "module",
   "description": "starter template for Anaemia applications",
+  "type": "module",
   "scripts": {
     "dev": "anaemia dev",
     "build": "anaemia build",

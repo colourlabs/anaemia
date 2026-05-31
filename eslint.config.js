@@ -7,7 +7,14 @@ import tsParser from "@typescript-eslint/parser";
 export default [
   {
     // ingore stubs
-    ignores: ["dist/**", "templates/**", ".anaemia/**", "**/dist/**", "pnpm-lock.yaml", "packages/core/src/context.browser.ts"],
+    ignores: [
+      "dist/**",
+      "templates/**",
+      ".anaemia/**",
+      "**/dist/**",
+      "pnpm-lock.yaml",
+      "packages/core/src/context.browser.ts",
+    ],
   },
 
   js.configs.recommended,
@@ -45,12 +52,16 @@ export default [
 
   // node globals for bundler + cli + scripts
   {
-    files: ["packages/bundler/**/*.ts", "packages/cli/**/*.ts", "packages/core/src/plugins/**/*.ts", "scripts/**/*.js"],
+    files: [
+      "packages/bundler/**/*.ts",
+      "packages/cli/**/*.ts",
+      "packages/core/src/plugins/**/*.ts",
+      "scripts/**/*.js",
+    ],
     languageOptions: {
       globals: { ...globals.node },
     },
   },
-
 
   // browser + node for core runtime
   {

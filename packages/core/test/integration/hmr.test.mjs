@@ -28,7 +28,9 @@ async function resolveConfigPort() {
         return userConfig.port;
       }
     } catch (err) {
-      console.warn(`[HMR test warning]: failed parsing anaemia.config.ts, falling back to port 3000. Error: ${err.message}`);
+      console.warn(
+        `[HMR test warning]: failed parsing anaemia.config.ts, falling back to port 3000. Error: ${err.message}`,
+      );
     }
   }
 
@@ -37,7 +39,10 @@ async function resolveConfigPort() {
 
 const TARGET_PORT = await resolveConfigPort();
 const BASE_URL = `http://localhost:${TARGET_PORT}`;
-const componentPath = path.resolve(projectRoot, "src/features/welcome-hero/components/WelcomeHero.tsx");
+const componentPath = path.resolve(
+  projectRoot,
+  "src/features/welcome-hero/components/WelcomeHero.tsx",
+);
 
 test("integration - dev server HMR & hydration lifecycle", async (t) => {
   let devProcess = null;
@@ -88,7 +93,11 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
           await new Promise((r) => setTimeout(r, 500));
         }
-        reject(new Error(`Server process started but port ${TARGET_PORT} never responded to HTTP requests.`));
+        reject(
+          new Error(
+            `Server process started but port ${TARGET_PORT} never responded to HTTP requests.`,
+          ),
+        );
       };
 
       devProcess.stdout.on("data", (data) => {
@@ -119,13 +128,24 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
     const titleText = await page.textContent("h1");
     assert.equal(titleText.trim(), "anaemia");
-    assert.equal(consoleErrors.length, 0, `Errors during initial render: ${consoleErrors.map((e) => e.message).join(", ")}`);
+    assert.equal(
+      consoleErrors.length,
+      0,
+      `Errors during initial render: ${consoleErrors.map((e) => e.message).join(", ")}`,
+    );
   });
 
   await t.test("should push hot module updates to browser when files change", async () => {
-    const updatedContent = originalComponentContent.replace(`<h1 class={styles.title}>anaemia</h1>`, `<h1 class={styles.title}>anaemia updated!</h1>`);
+    const updatedContent = originalComponentContent.replace(
+      `<h1 class={styles.title}>anaemia</h1>`,
+      `<h1 class={styles.title}>anaemia updated!</h1>`,
+    );
 
-    assert.notEqual(originalComponentContent, updatedContent, "Regex failed to modify component text.");
+    assert.notEqual(
+      originalComponentContent,
+      updatedContent,
+      "Regex failed to modify component text.",
+    );
     fs.writeFileSync(componentPath, updatedContent, "utf-8");
 
     await page.waitForFunction(
@@ -134,7 +154,7 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
         const h1 = document.querySelector("h1");
         return h1 && h1.textContent.trim() === "anaemia updated!";
       },
-      { timeout: 10000 }
+      { timeout: 10000 },
     );
   });
 
@@ -145,6 +165,10 @@ test("integration - dev server HMR & hydration lifecycle", async (t) => {
 
     const titleText = await page.textContent("h1");
     assert.equal(titleText.trim(), "anaemia updated!");
-    assert.equal(consoleErrors.length, 0, `Errors detected after page refresh: ${consoleErrors.map((e) => e.message).join(", ")}`);
+    assert.equal(
+      consoleErrors.length,
+      0,
+      `Errors detected after page refresh: ${consoleErrors.map((e) => e.message).join(", ")}`,
+    );
   });
 });

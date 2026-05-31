@@ -18,7 +18,7 @@ export function createServerResource<Source, Return>(
     readHydrationCache?: (s: Source) => Return | undefined;
     id?: string;
   },
-  options?: ResourceOptions<Return, Source>
+  options?: ResourceOptions<Return, Source>,
 ): ResourceReturn<Return, unknown> {
   if (isServer) {
     let ssrInitialValue: Return | undefined = undefined;

@@ -14,10 +14,7 @@ export default {
         "src/runtime/context.browser.ts",
       ],
       project: ["src/**/*.ts", "src/**/*.tsx"],
-      ignore: [
-        "src/runtime/entry-client.tsx",
-        "src/runtime/entry-server.tsx",
-      ],
+      ignore: ["src/runtime/entry-client.tsx", "src/runtime/entry-server.tsx"],
     },
   },
   ignore: ["templates/**", "packages/bundler/dist/**"],

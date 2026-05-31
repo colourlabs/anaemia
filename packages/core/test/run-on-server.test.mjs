@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  runOnServer,
-  serverFunctionsRegistry,
-  ssrStorage,
-} from "../dist/runtime/context.js";
+import { runOnServer, serverFunctionsRegistry, ssrStorage } from "../dist/runtime/context.js";
 import { createRouteRequest } from "../dist/runtime/route-request.js";
 
 test("runOnServer returns a callable function and registers the original implementation", async () => {
@@ -26,7 +22,7 @@ test("runOnServer records SSR results by id and argument list for hydration", as
 
   assert.deepEqual(store.get("__SERVER_FUNCTION_DATA__"), {
     greet: {
-      "[\"Ada\"]": "hello Ada",
+      '["Ada"]': "hello Ada",
     },
   });
 });

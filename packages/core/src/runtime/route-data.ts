@@ -43,7 +43,9 @@ function readSSRData(): unknown {
   }
 }
 
-export function RouteDataController<TParams extends Params = Params>(props: RouteDataControllerProps<TParams>) {
+export function RouteDataController<TParams extends Params = Params>(
+  props: RouteDataControllerProps<TParams>,
+) {
   const params = useParams<TParams>();
   const location = useLocation();
   const ssrData = readSSRData();
@@ -61,7 +63,7 @@ export function RouteDataController<TParams extends Params = Params>(props: Rout
     {
       initialValue: ssrData,
       ssrLoadFrom: "initial",
-    }
+    },
   );
 
   return createComponent(RouteDataContext.Provider, {

@@ -35,7 +35,7 @@ function ensureCacheInitialized() {
 
 function findLooseCacheMatch(
   serverFunctionData: Record<string, unknown>,
-  targetArg: string
+  targetArg: string,
 ): CacheMatch | undefined {
   if (!serverFunctionData) return undefined;
   const strictKey = JSON.stringify([targetArg]);
@@ -56,7 +56,9 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
+        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as
+          | ServerFunctionCache
+          | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;
@@ -80,7 +82,7 @@ export function $$executeClientRpc(hashId: string) {
       body: JSON.stringify(args),
     });
     if (!response.ok) throw new Error(`[anaemia] RPC execution failed: ${response.status}`);
-    return await response.json() as unknown;
+    return (await response.json()) as unknown;
   };
 
   asyncRpcCall.id = hashId;
@@ -88,7 +90,9 @@ export function $$executeClientRpc(hashId: string) {
     if (isServer) {
       const store = getServerStore();
       if (store) {
-        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as ServerFunctionCache | undefined;
+        const functionCache = store.get("__SERVER_FUNCTION_DATA__") as
+          | ServerFunctionCache
+          | undefined;
         if (functionCache?.[hashId]) {
           const match = findLooseCacheMatch(functionCache[hashId], args[0] as string);
           if (match) return match.data;

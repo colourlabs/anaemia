@@ -13,7 +13,11 @@ export function scaffoldFeature(rawName: string, appRoot: string) {
 
   const featureDir = path.resolve(appRoot, `./src/features/${folderName}`);
 
-  const directories = [path.join(featureDir, "components"), path.join(featureDir, "hooks"), path.join(featureDir, "server")];
+  const directories = [
+    path.join(featureDir, "components"),
+    path.join(featureDir, "hooks"),
+    path.join(featureDir, "server"),
+  ];
 
   directories.forEach((dir) => fs.mkdirSync(dir, { recursive: true }));
 
@@ -118,13 +122,29 @@ export { ${componentName} } from "./components/${componentName}.js";
 export { use${componentName} } from "./hooks/use${componentName}.js";
 `;
 
-  fs.writeFileSync(path.join(featureDir, `components/${componentName}.${ext}`), componentContent, "utf8");
+  fs.writeFileSync(
+    path.join(featureDir, `components/${componentName}.${ext}`),
+    componentContent,
+    "utf8",
+  );
 
-  fs.writeFileSync(path.join(featureDir, `components/${componentName}.module.scss`), `.wrapper {\n  display: block;\n}\n`, "utf8");
+  fs.writeFileSync(
+    path.join(featureDir, `components/${componentName}.module.scss`),
+    `.wrapper {\n  display: block;\n}\n`,
+    "utf8",
+  );
 
-  fs.writeFileSync(path.join(featureDir, `server/actions.server.${scriptExt}`), actionsContent, "utf8");
+  fs.writeFileSync(
+    path.join(featureDir, `server/actions.server.${scriptExt}`),
+    actionsContent,
+    "utf8",
+  );
 
-  fs.writeFileSync(path.join(featureDir, `hooks/use${componentName}.${scriptExt}`), hookContent, "utf8");
+  fs.writeFileSync(
+    path.join(featureDir, `hooks/use${componentName}.${scriptExt}`),
+    hookContent,
+    "utf8",
+  );
 
   fs.writeFileSync(path.join(featureDir, `index.${scriptExt}`), indexContent, "utf8");
 
@@ -145,7 +165,11 @@ interface GeneratorOptions {
   pc: { dim: (s: string) => string; cyan: (s: string) => string };
 }
 
-export function generateSharedComponent(appRoot: string, componentName: string, { logger, pc }: GeneratorOptions) {
+export function generateSharedComponent(
+  appRoot: string,
+  componentName: string,
+  { logger, pc }: GeneratorOptions,
+) {
   const kebabFolder = toKebabCase(componentName);
   const pascalName = toPascalCase(componentName);
 
@@ -240,7 +264,7 @@ export function scaffoldPage(rawName: string, appRoot: string) {
       fileName
         .replace(/^\[\.\.\./, "") // strip [...
         .replace(/^\[/, "") // strip [
-        .replace(/\]$/, "") // strip ]
+        .replace(/\]$/, ""), // strip ]
     ) + "Page";
 
   // derive the URL pattern for the comment header
@@ -338,7 +362,9 @@ export function scaffoldHook(rawName: string, appRoot: string) {
   // ensure it starts with "use"
   const hookName = rawHookName.startsWith("use") ? rawHookName : `use${toPascalCase(rawHookName)}`;
 
-  const hookDir = isFeatureHook ? path.resolve(appRoot, `./src/features/${toKebabCase(featureName!)}/hooks`) : path.resolve(appRoot, `./src/shared/hooks`);
+  const hookDir = isFeatureHook
+    ? path.resolve(appRoot, `./src/features/${toKebabCase(featureName!)}/hooks`)
+    : path.resolve(appRoot, `./src/shared/hooks`);
 
   const hookPath = path.join(hookDir, `${hookName}.${ext}`);
 
@@ -355,7 +381,9 @@ export function scaffoldHook(rawName: string, appRoot: string) {
   if (isFeatureHook) {
     const featureDir = path.resolve(appRoot, `./src/features/${toKebabCase(featureName!)}`);
     if (!fs.existsSync(featureDir)) {
-      console.error(`[anaemia] feature "${featureName}" does not exist. Run "create feature:${featureName}" first.`);
+      console.error(
+        `[anaemia] feature "${featureName}" does not exist. Run "create feature:${featureName}" first.`,
+      );
       process.exit(1);
     }
   }
@@ -409,7 +437,10 @@ export function ${hookName}(options) {
   fs.writeFileSync(hookPath, hookContent, "utf8");
 
   if (isFeatureHook) {
-    const indexPath = path.resolve(appRoot, `./src/features/${toKebabCase(featureName!)}/index.${ext}`);
+    const indexPath = path.resolve(
+      appRoot,
+      `./src/features/${toKebabCase(featureName!)}/index.${ext}`,
+    );
 
     if (fs.existsSync(indexPath)) {
       const existing = fs.readFileSync(indexPath, "utf8");
@@ -421,7 +452,9 @@ export function ${hookName}(options) {
     }
   }
 
-  const location = isFeatureHook ? `src/features/${toKebabCase(featureName!)}/hooks/${hookName}.${ext}` : `src/shared/hooks/${hookName}.${ext}`;
+  const location = isFeatureHook
+    ? `src/features/${toKebabCase(featureName!)}/hooks/${hookName}.${ext}`
+    : `src/shared/hooks/${hookName}.${ext}`;
 
   console.log("\n🪝 successfully generated hook:");
   console.log(`  └─ ${location}\n`);

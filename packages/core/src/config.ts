@@ -63,7 +63,7 @@ export interface AnaemiaConfig {
    *   client: { __APP_VERSION__: JSON.stringify("1.0.0") },
    *   server: { __DB_POOL_SIZE__: "10" }
    * }
-  */
+   */
   define?: {
     client?: Record<string, string>;
     server?: Record<string, string>;

@@ -1,8 +1,4 @@
-import { 
-  useRouteData, 
-  runOnServer, 
-  type InferServerData 
-} from "@anaemia/core";
+import { useRouteData, runOnServer, type InferServerData } from "@anaemia/core";
 
 import { WelcomeHero } from "@features/welcome-hero/components/WelcomeHero.jsx";
 

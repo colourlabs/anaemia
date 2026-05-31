@@ -6,17 +6,19 @@ interface RspackModule {
   LightningCssMinimizerRspackPlugin: typeof LightningCssType;
 }
 
-export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } = {}): AnaemiaPlugin {
+export function anaemiaLightningCssPlugin(
+  options: { browserslist?: string[] } = {},
+): AnaemiaPlugin {
   const targets = options.browserslist ?? ["defaults", "not IE 11"];
 
   const localRequire = createRequire(import.meta.url);
   let rspackModule: RspackModule;
-  
+
   try {
     rspackModule = localRequire("@rspack/core");
   } catch {
     throw new Error(
-      "[anaemia] The LightningCSS plugin requires '@rspack/core' to be available in the execution workspace."
+      "[anaemia] The LightningCSS plugin requires '@rspack/core' to be available in the execution workspace.",
     );
   }
 
@@ -28,14 +30,19 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
 
       if (config.module?.rules) {
         config.module.rules.forEach((rule) => {
-          if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
+          if (
+            rule &&
+            typeof rule === "object" &&
+            rule.test &&
+            rule.test.toString().includes("ss")
+          ) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
-            
+
             rule.use = [
               ...currentUse,
               {
                 loader: "builtin:lightningcss-loader",
-                options: { 
+                options: {
                   targets,
                   modules: rule.type === "css/auto",
                 },
@@ -64,14 +71,19 @@ export function anaemiaLightningCssPlugin(options: { browserslist?: string[] } =
     serverRspackConfig(config) {
       if (config.module?.rules) {
         config.module.rules.forEach((rule) => {
-          if (rule && typeof rule === "object" && rule.test && rule.test.toString().includes("ss")) {
+          if (
+            rule &&
+            typeof rule === "object" &&
+            rule.test &&
+            rule.test.toString().includes("ss")
+          ) {
             const currentUse = Array.isArray(rule.use) ? rule.use : [];
-            
+
             rule.use = [
               ...currentUse,
               {
                 loader: "builtin:lightningcss-loader",
-                options: { 
+                options: {
                   targets,
                   modules: rule.type === "css/auto",
                 },

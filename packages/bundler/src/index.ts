@@ -22,7 +22,10 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {}): Promise<[Configuration, Configuration]> {
+export async function getRspackConfig(
+  appRoot: string,
+  config: AnaemiaConfig = {},
+): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
   const rawEnv = process.env;
   const coreRuntimeDir = path.dirname(require.resolve("@anaemia/core/package.json"));
@@ -40,9 +43,14 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
   const entryFile = generateRouterEntry(appRoot, routes);
   const serverRoutesFile = generateServerRoutes(appRoot, serverRoutes);
   const styleRules = createStyleRules(config);
-  const extraClientBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
-  const extraServerBabelPlugins = config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
-  const solidRefreshPlugin = [require.resolve("solid-refresh/babel"), { bundler: "rspack-esm", jsx: false }];
+  const extraClientBabelPlugins =
+    config.plugins?.flatMap((p) => p.babelPlugins?.client ?? []) ?? [];
+  const extraServerBabelPlugins =
+    config.plugins?.flatMap((p) => p.babelPlugins?.server ?? []) ?? [];
+  const solidRefreshPlugin = [
+    require.resolve("solid-refresh/babel"),
+    { bundler: "rspack-esm", jsx: false },
+  ];
 
   // env processing
   const serverEnv: Record<string, string> = {
@@ -78,7 +86,10 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     devtool: isDev ? "eval-cheap-module-source-map" : false,
     cache: isDev,
     entry: {
-      client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, "entry-client.jsx")],
+      client: [
+        ...(isDev ? [require.resolve("solid-refresh")] : []),
+        path.resolve(runtimeDir, "entry-client.jsx"),
+      ],
     },
     output: {
       path: path.resolve(appRoot, "./dist/client"),
@@ -95,9 +106,19 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       alias: {
         ...sharedResolve.alias,
         "solid-refresh": require.resolve("solid-refresh"),
-        [path.resolve(coreRuntimeDir, "./dist/runtime/context.js")]: path.resolve(coreRuntimeDir, "./dist/runtime/context.browser.js"),
+        [path.resolve(coreRuntimeDir, "./dist/runtime/context.js")]: path.resolve(
+          coreRuntimeDir,
+          "./dist/runtime/context.browser.js",
+        ),
       },
-      fallback: { async_hooks: false, "node:async_hooks": false, fs: false, "node:fs": false, path: false, "node:path": false },
+      fallback: {
+        async_hooks: false,
+        "node:async_hooks": false,
+        fs: false,
+        "node:fs": false,
+        path: false,
+        "node:path": false,
+      },
     },
     devServer: isDev
       ? {
@@ -110,9 +131,17 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
         }
       : undefined,
     plugins: [
-      new rspack.HtmlRspackPlugin({ template: path.resolve(appRoot, "./index.html"), filename: "index.html", inject: false }),
+      new rspack.HtmlRspackPlugin({
+        template: path.resolve(appRoot, "./index.html"),
+        filename: "index.html",
+        inject: false,
+      }),
       new rspack.DefinePlugin({
-        __ANAEMIA_RUNTIME_CONFIG__: JSON.stringify({ port: config.port, assets: config.assets, styles: config.styles }),
+        __ANAEMIA_RUNTIME_CONFIG__: JSON.stringify({
+          port: config.port,
+          assets: config.assets,
+          styles: config.styles,
+        }),
         ...config.define?.client,
         "import.meta.env": clientEnv,
       }),
@@ -126,7 +155,7 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
           if (fs.existsSync(srcPath)) return srcPath;
 
           return path.resolve(__dirname, "../src/runtime/empty-module.cjs");
-        })()
+        })(),
       ),
       new AnaemiaManifestHydrationPlugin({ appRoot }),
     ],
@@ -135,7 +164,15 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       rules: [
         styleRules.client,
         {
-          ...createBabelRule({ isServer: false, isDev, plugins: [clientServerFnTransform, ...(isDev ? [solidRefreshPlugin] : []), ...extraClientBabelPlugins] }),
+          ...createBabelRule({
+            isServer: false,
+            isDev,
+            plugins: [
+              clientServerFnTransform,
+              ...(isDev ? [solidRefreshPlugin] : []),
+              ...extraClientBabelPlugins,
+            ],
+          }),
           exclude: (modulePath: string) => {
             if (modulePath.includes("@anaemia") && modulePath.includes("core")) return false;
             if (modulePath.includes("@solidjs") && modulePath.includes("router")) return false;
@@ -152,7 +189,13 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
     context: appRoot,
     target: "node",
     entry: { server: path.resolve(runtimeDir, "entry-server.jsx") },
-    output: { path: path.resolve(appRoot, "./dist/server"), filename: "index.js", module: true, chunkFormat: "module", chunkLoading: "import" },
+    output: {
+      path: path.resolve(appRoot, "./dist/server"),
+      filename: "index.js",
+      module: true,
+      chunkFormat: "module",
+      chunkLoading: "import",
+    },
     optimization: { nodeEnv: false },
     resolve: {
       ...sharedResolve,
@@ -172,7 +215,11 @@ export async function getRspackConfig(appRoot: string, config: AnaemiaConfig = {
       rules: [
         styleRules.server,
         {
-          ...createBabelRule({ isServer: true, isDev, plugins: [serverHashInjector, ...extraServerBabelPlugins] }),
+          ...createBabelRule({
+            isServer: true,
+            isDev,
+            plugins: [serverHashInjector, ...extraServerBabelPlugins],
+          }),
           exclude: (modulePath: string) => {
             if (modulePath.includes("@anaemia") && modulePath.includes("core")) return false;
             if (modulePath.includes("@solidjs") && modulePath.includes("router")) return false;

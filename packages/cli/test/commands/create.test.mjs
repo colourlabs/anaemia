@@ -28,7 +28,10 @@ test("convertTypeScriptToJs strips types from .ts files", async () => {
 test("convertTypeScriptToJs strips types from .tsx files", async () => {
   const dir = createTmpDir();
   try {
-    fs.writeFileSync(path.join(dir, "Component.tsx"), `export default function Comp(props: { name: string }) {\n  return <div>{props.name}</div>;\n}\n`);
+    fs.writeFileSync(
+      path.join(dir, "Component.tsx"),
+      `export default function Comp(props: { name: string }) {\n  return <div>{props.name}</div>;\n}\n`,
+    );
 
     const { convertTypeScriptToJs } = await import("../../dist/utils/ts-to-js.js");
     convertTypeScriptToJs(dir);
@@ -45,7 +48,10 @@ test("convertTypeScriptToJs strips types from .tsx files", async () => {
 test("convertTypeScriptToJs cleans up leading blank lines", async () => {
   const dir = createTmpDir();
   try {
-    fs.writeFileSync(path.join(dir, "root.tsx"), `import { JSX } from "solid-js";\n\nexport default function Root(props: { children: JSX.Element }) {\n  return <>{props.children}</>;\n}\n`);
+    fs.writeFileSync(
+      path.join(dir, "root.tsx"),
+      `import { JSX } from "solid-js";\n\nexport default function Root(props: { children: JSX.Element }) {\n  return <>{props.children}</>;\n}\n`,
+    );
 
     const { convertTypeScriptToJs } = await import("../../dist/utils/ts-to-js.js");
     convertTypeScriptToJs(dir);

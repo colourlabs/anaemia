@@ -14,7 +14,11 @@ import type { StatusCode, RedirectStatusCode } from "hono/utils/http-status";
 import App from "anaemia-user-app";
 
 // @ts-expect-error - resolved by Rspack
-import { preloadActiveClientRoute, serverLoaderRegistry, serverGuardRegistry } from "anaemia-user-app";
+import {
+  preloadActiveClientRoute,
+  serverLoaderRegistry,
+  serverGuardRegistry,
+} from "anaemia-user-app";
 
 // @ts-expect-error - resolved by Rspack
 import { registerServerRoutes } from "__anaemia_server_routes__";
@@ -82,7 +86,7 @@ if (isDev) {
     "/assets/*",
     serveStatic({
       root: path.resolve(process.cwd(), "./dist/client"),
-    })
+    }),
   );
 }
 
@@ -168,8 +172,10 @@ const loadManifestAndTemplate = async () => {
     }
   } else {
     try {
-      if (fs.existsSync(templatePath)) memoizedHtmlTemplate = fs.readFileSync(templatePath, "utf-8");
-      if (fs.existsSync(manifestPath)) memoizedManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+      if (fs.existsSync(templatePath))
+        memoizedHtmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      if (fs.existsSync(manifestPath))
+        memoizedManifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
     } catch {
       console.warn("build assets not fully initialized during bootstrapping cycle.");
     }
@@ -191,9 +197,23 @@ type RouteMatch = {
   params: Record<string, string>;
 };
 
-type GuardFn = (ctx: { params: Record<string, string>; request: Request; url: string }) => void | undefined | { redirect: string; status?: 301 | 302 | 307 | 308 } | { status: number; body?: string } | Promise<void | undefined | { redirect: string; status?: number } | { status: number; body?: string }>;
+type GuardFn = (ctx: {
+  params: Record<string, string>;
+  request: Request;
+  url: string;
+}) =>
+  | void
+  | undefined
+  | { redirect: string; status?: 301 | 302 | 307 | 308 }
+  | { status: number; body?: string }
+  | Promise<
+      void | undefined | { redirect: string; status?: number } | { status: number; body?: string }
+    >;
 
-async function runGuards(pattern: string, ctx: { params: Record<string, string>; request: Request; url: string }) {
+async function runGuards(
+  pattern: string,
+  ctx: { params: Record<string, string>; request: Request; url: string },
+) {
   const chain: (() => Promise<GuardFn[]>)[] = serverGuardRegistry.get(pattern) ?? [];
   for (const loadGuards of chain) {
     const guards: GuardFn[] = await loadGuards();
@@ -221,7 +241,9 @@ function matchRoute(manifest: RouteManifest, reqPath: string): RouteMatch {
   }
 
   for (const route of sortedRoutes) {
-    const regexStr = route.urlPattern.replace(/:([a-zA-Z0-9_-]+)/g, "(?<$1>[^/]+)").replace(/\*([a-zA-Z0-9_-]*)/g, "(?<catchall>.*)");
+    const regexStr = route.urlPattern
+      .replace(/:([a-zA-Z0-9_-]+)/g, "(?<$1>[^/]+)")
+      .replace(/\*([a-zA-Z0-9_-]*)/g, "(?<catchall>.*)");
 
     const match = new RegExp(`^${regexStr}$`).exec(reqPath);
     if (match) {
@@ -253,7 +275,12 @@ app.get("*", async (c) => {
   }
 
   const reqPath = c.req.path;
-  const { activeChunk, targetPattern, statusCode: matchedStatus, params } = matchRoute(manifest, reqPath);
+  const {
+    activeChunk,
+    targetPattern,
+    statusCode: matchedStatus,
+    params,
+  } = matchRoute(manifest, reqPath);
   let statusCode: StatusCode = matchedStatus;
   const loaderArgs = { params, request: c.req.raw };
 
@@ -262,9 +289,17 @@ app.get("*", async (c) => {
 
   if (targetPattern) {
     try {
-      const guardResult = await runGuards(targetPattern, { params, request: c.req.raw, url: reqPath });
+      const guardResult = await runGuards(targetPattern, {
+        params,
+        request: c.req.raw,
+        url: reqPath,
+      });
       if (guardResult) {
-        if ("redirect" in guardResult) return c.redirect(guardResult.redirect, (guardResult.status ?? 302) as RedirectStatusCode);
+        if ("redirect" in guardResult)
+          return c.redirect(
+            guardResult.redirect,
+            (guardResult.status ?? 302) as RedirectStatusCode,
+          );
         if ("status" in guardResult) statusCode = guardResult.status as StatusCode;
       }
     } catch (err) {
@@ -355,16 +390,27 @@ app.get("*", async (c) => {
     __SERVER_FUNCTION_DATA__: rawStorePayload.__SERVER_FUNCTION_DATA__ || {},
   };
 
-  const serializedData = JSON.stringify(finalHydrationStatePayload).replace(/&/g, "\\u0026").replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\//g, "\\u002f");
+  const serializedData = JSON.stringify(finalHydrationStatePayload)
+    .replace(/&/g, "\\u0026")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\//g, "\\u002f");
 
   const dataScript = `<script id="__ANAEMIA_DATA__" type="application/json">${serializedData}</script>\n`;
 
-  const devNoCacheTag = isDev ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n` : "";
+  const devNoCacheTag = isDev
+    ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n`
+    : "";
 
   const combinedHeadInjections = `${devNoCacheTag}${assetStyles}${dataScript}${hydrationScript}`;
   const sanitizedPayload = htmlPayload.trim();
 
-  let completeHtmlOutput = ENTRY_TAG_REGEX.test(template) ? template.replace(ENTRY_TAG_REGEX, (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`) : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
+  let completeHtmlOutput = ENTRY_TAG_REGEX.test(template)
+    ? template.replace(
+        ENTRY_TAG_REGEX,
+        (_, open, _tag, _inner, close) => `${open}${sanitizedPayload}${close}`,
+      )
+    : template.replace("</body>", () => `<div anaemia-entry>${sanitizedPayload}</div></body>`);
 
   completeHtmlOutput = completeHtmlOutput.replace("<head>", `<head>${combinedHeadInjections}`);
   completeHtmlOutput = completeHtmlOutput.replace("</body>", `${assetScripts}</body>`);

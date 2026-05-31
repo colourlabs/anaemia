@@ -1,9 +1,9 @@
 {
   "name": "@anaemia/bundler",
   "version": "0.3.7",
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

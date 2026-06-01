@@ -41,7 +41,7 @@ export function createBabelRule({
   const generateMode = isServer ? "ssr" : "dom";
 
   return {
-    test: /\.[jt]sx?$/,
+    test: /\.[jt]sx?$|\.mdx?$/,
     use: [
       {
         loader: require.resolve("babel-loader"),

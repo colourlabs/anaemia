@@ -7,7 +7,7 @@ import readline from "node:readline";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
-const PACKAGES = ["packages/core", "packages/bundler", "packages/cli"];
+const PACKAGES = ["packages/core", "packages/bundler", "packages/cli", "packages/plugin-mdx"];
 const TEMPLATE_PKG = path.resolve(root, "templates/base-app/package.json");
 
 const DRY_RUN = process.argv.includes("--dry-run");

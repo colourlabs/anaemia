@@ -95,10 +95,10 @@ test("convertTypeScriptToJs creates jsconfig.json with correct config", async ()
   try {
     const { convertTypeScriptToJs } = await import("../../dist/utils/ts-to-js.js");
     convertTypeScriptToJs(dir);
-    
+
     const jsconfigPath = path.join(dir, "jsconfig.json");
     assert.ok(fs.existsSync(jsconfigPath), "jsconfig.json should be created");
-    
+
     const jsconfig = JSON.parse(fs.readFileSync(jsconfigPath, "utf-8"));
     assert.equal(jsconfig.compilerOptions.baseUrl, ".");
     assert.equal(jsconfig.compilerOptions.jsx, "preserve");

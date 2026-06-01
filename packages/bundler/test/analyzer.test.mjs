@@ -423,10 +423,7 @@ test("missing route export: route without default export errors", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
   try {
     fs.mkdirSync(path.join(dir, "src/routes"), { recursive: true });
-    fs.writeFileSync(
-      path.join(dir, "src/routes/index.tsx"),
-      `export function notDefault() { return <div />; }`,
-    );
+    fs.writeFileSync(path.join(dir, "src/routes/index.tsx"), `export function notDefault() { return <div />; }`);
     const result = await analyzeApp(dir, { mode: "test" });
     const errors = result.diagnostics.filter((d) => d.code === "MISSING_ROUTE_EXPORT");
     assert.equal(errors.length, 1);

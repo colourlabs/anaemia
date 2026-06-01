@@ -1,0 +1,29 @@
+{
+  "name": "@anaemia/plugin-mdx",
+  "version": "0.5.2",
+  "description": "MDX support for anaemia",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@mdx-js/loader": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1"
+  },
+  "peerDependencies": {
+    "@anaemia/core": "*",
+    "@rspack/core": "*",
+    "solid-js": "^1.9.13"
+  }
+}

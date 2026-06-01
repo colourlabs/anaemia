@@ -10,7 +10,7 @@ a work in progress high-performance SolidJS SSR framework built for large codeba
 
 - We abuse CSS modules (a ton) - every page on bojanSocial uses CSS modules with SCSS so we needed first class support for it. Our entire styling is custom and complex to achieve the look we want.
 
-- Enforcing consistency at large scales, project structures need to be layed out without changing midway 
+- Enforcing consistency at large scales, project structures need to be layed out without changing midway
 
 This is pretty bad as the browser has to send tons of requests just to get a home page. This is the network-dependency tree just for the index page alone on desktop (with lazy-loading). The home page where most of our users use the application is another thing all together
 

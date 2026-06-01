@@ -12,12 +12,16 @@ import { preloadActiveClientRoute, serverLoaderRegistry, serverGuardRegistry } f
 // @ts-expect-error - resolved by Rspack
 import { registerServerRoutes } from "__anaemia_server_routes__";
 
+// @ts-expect-error - resolved by Rspack
+import userConfig from "__anaemia_user_config__";
+
 const env = createRuntimeEnv();
 const manifestStore = createManifestStore(env);
 
 const app = createServerApp({
   App,
   env,
+  plugins: userConfig.plugins ?? [],
   preloadActiveClientRoute,
   serverLoaderRegistry,
   serverGuardRegistry,

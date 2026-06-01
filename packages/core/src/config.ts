@@ -1,6 +1,6 @@
-import type { Hono } from "hono";
 import type { Configuration } from "@rspack/core";
 import type { PluginItem } from "@babel/core";
+import type { ServerApp } from "./index.js";
 
 export interface AnaemiaPlugin {
   /**
@@ -29,12 +29,24 @@ export interface AnaemiaPlugin {
   /**
    * hook into the Hono app instance to register additional routes or middleware.
    */
-  configureServer?: (app: Hono) => void;
+  configureServer?: (app: ServerApp) => void;
 
   /**
-   * transform the final HTML string before it is sent to the client.
+   * inject into the <head> of every page
    */
-  transformHtml?: (html: string) => string | Promise<string>;
+  injectHead?: () => string | Promise<string>;
+
+  /**
+   * inject before </body> of every page
+   */
+  injectBody?: () => string | Promise<string>;
+
+  /**
+   * inject at the start of <body>, before the app renders.
+   * useful for scripts that must run before first paint to avoid flashes,
+   * such as theme detection or feature flag bootstrapping.
+   */
+  injectBodyStart?: () => string | Promise<string>;
 }
 
 export interface AnaemiaConfig {
@@ -42,6 +54,7 @@ export interface AnaemiaConfig {
   assets?: {
     publicPath?: string;
   };
+
   styles?: {
     sass?: boolean;
     modules?: boolean;
@@ -54,6 +67,7 @@ export interface AnaemiaConfig {
      */
     modulesLocalIdentName?: string;
   };
+
   experimental?: {
     outputModule?: boolean;
   };

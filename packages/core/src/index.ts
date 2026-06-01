@@ -14,3 +14,6 @@ export type {
   GuardFn,
   ServerFunction,
 } from "./types.js";
+
+export type { Context as ServerContext, Env as ServerEnv, Input as ServerInput } from "hono";
+export type { Hono as ServerApp } from "hono";

@@ -12,6 +12,7 @@ import { createHydrationDataScript, createHydrationRuntimeScript } from "./hydra
 import { matchRoute } from "./route-match.js";
 import type { RouteManifest, RuntimeEnv } from "./types.js";
 import type { ManifestSnapshot } from "./manifest.js";
+import type { AnaemiaPlugin } from "../../config.js";
 
 const staticCache = new Map<string, string>();
 
@@ -25,6 +26,7 @@ type RenderRequestOptions = {
   serverGuardRegistry: Map<string, (() => Promise<GuardFn[]>)[]>;
   getManifestSnapshot: () => ManifestSnapshot;
   loadManifestAndTemplate: () => Promise<void>;
+  plugins?: AnaemiaPlugin[];
 };
 
 type SolidStream = ReturnType<typeof renderToStream>;
@@ -205,8 +207,24 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     }
 
     const routeAssetTags = getRouteAssetTags(manifest, activeChunk);
-    const headInjections = `${createDevNoCacheHeadTags(options.env.isDev)}${routeAssetTags.styles}${createHydrationRuntimeScript()}`;
-    const shell = createHtmlStreamShell({ template, headInjections, bodyInjections: "" });
+
+    const plugins = options.plugins ?? [];
+
+    // resolve all injections before streaming starts
+    const [pluginHeadInjections, pluginBodyStartInjections, pluginBodyInjections] = await Promise.all([
+      Promise.all(plugins.flatMap((p) => p.injectHead?.() ?? [])).then((r) => r.join("")),
+      Promise.all(plugins.flatMap((p) => p.injectBodyStart?.() ?? [])).then((r) => r.join("")),
+      Promise.all(plugins.flatMap((p) => p.injectBody?.() ?? [])).then((r) => r.join("")),
+    ]);
+
+    const headInjections = `${createDevNoCacheHeadTags(options.env.isDev)}${routeAssetTags.styles}${createHydrationRuntimeScript()}${pluginHeadInjections}`;
+
+    const shell = createHtmlStreamShell({
+      template,
+      headInjections,
+      bodyStartInjections: pluginBodyStartInjections,
+      bodyInjections: "", // body injections are handled in afterEntry to ensure they are flushed after the app content for better performance
+    });
 
     setDevResponseCacheHeaders(c, options.env);
     c.status(statusCode);
@@ -217,7 +235,7 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
         beforeEntry: shell.beforeEntry,
         renderStream,
         afterEntry: () => {
-          const bodyInjections = `${createHydrationDataScript(store)}${routeAssetTags.scripts}`;
+          const bodyInjections = `${createHydrationDataScript(store)}${routeAssetTags.scripts}${pluginBodyInjections}`;
           return shell.afterEntry.includes("</body>")
             ? shell.afterEntry.replace("</body>", `${bodyInjections}</body>`)
             : `${shell.afterEntry}${bodyInjections}`;

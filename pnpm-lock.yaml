@@ -229,9 +229,6 @@ importers:
       '@solidjs/router':
         specifier: ^0.16.1
         version: 0.16.1(solid-js@1.9.13)
-      hono:
-        specifier: ^4.12.23
-        version: 4.12.23
       lightningcss:
         specifier: ^1.32.0
         version: 1.32.0

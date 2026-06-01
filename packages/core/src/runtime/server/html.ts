@@ -51,34 +51,42 @@ export function createDevNoCacheHeadTags(isDev: boolean): string {
     : "";
 }
 
-export function createHtmlStreamShell(args: { template: string; headInjections: string; bodyInjections: string }): {
+export function createHtmlStreamShell(args: {
+  template: string;
+  headInjections: string;
+  bodyStartInjections: string;
+  bodyInjections: string;
+}): {
   beforeEntry: string;
   afterEntry: string;
 } {
-  const templateWithHead = args.template.replace("<head>", `<head>${args.headInjections}`);
-  const entryMatch = ENTRY_TAG_REGEX.exec(templateWithHead);
+  const templateWithHead = args.template.replace(/<head[^>]*>/, (match) => `${match}${args.headInjections}`);
+  const templateWithBodyStart = templateWithHead.replace(
+    /<body[^>]*>/,
+    (match) => `${match}${args.bodyStartInjections}`,
+  );
 
+  const entryMatch = ENTRY_TAG_REGEX.exec(templateWithBodyStart);
   if (entryMatch) {
     const [fullMatch, openTag, _tagName, _inner, closeTag] = entryMatch;
-    const beforeEntry = `${templateWithHead.slice(0, entryMatch.index)}${openTag}`;
-    const afterEntry = `${closeTag}${templateWithHead.slice(entryMatch.index + fullMatch.length)}`.replace(
+    const beforeEntry = `${templateWithBodyStart.slice(0, entryMatch.index)}${openTag}`;
+    const afterEntry = `${closeTag}${templateWithBodyStart.slice(entryMatch.index + fullMatch.length)}`.replace(
       "</body>",
       `${args.bodyInjections}</body>`,
     );
-
     return { beforeEntry, afterEntry };
   }
 
-  const bodyCloseIndex = templateWithHead.lastIndexOf("</body>");
+  const bodyCloseIndex = templateWithBodyStart.lastIndexOf("</body>");
   if (bodyCloseIndex >= 0) {
     return {
-      beforeEntry: `${templateWithHead.slice(0, bodyCloseIndex)}<div ${ENTRY_ATTRIBUTE}>`,
-      afterEntry: `</div>${args.bodyInjections}${templateWithHead.slice(bodyCloseIndex)}`,
+      beforeEntry: `${templateWithBodyStart.slice(0, bodyCloseIndex)}<div ${ENTRY_ATTRIBUTE}>`,
+      afterEntry: `</div>${args.bodyInjections}${templateWithBodyStart.slice(bodyCloseIndex)}`,
     };
   }
 
   return {
-    beforeEntry: `${templateWithHead}<div ${ENTRY_ATTRIBUTE}>`,
+    beforeEntry: `${templateWithBodyStart}<div ${ENTRY_ATTRIBUTE}>`,
     afterEntry: `</div>${args.bodyInjections}`,
   };
 }

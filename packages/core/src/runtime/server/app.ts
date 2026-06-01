@@ -9,12 +9,14 @@ import { createRenderRequestHandler } from "./render-request.jsx";
 import type { RuntimeEnv } from "./types.js";
 import type { GuardFn } from "./guards.js";
 import type { ManifestSnapshot } from "./manifest.js";
+import type { AnaemiaPlugin } from "../../config.js";
 
 type ServerLoader = (args: { params: Record<string, string>; request: Request }) => unknown | Promise<unknown>;
 
 type CreateServerAppOptions = {
   App: Component;
   env: RuntimeEnv;
+  plugins: AnaemiaPlugin[];
   preloadActiveClientRoute: (path: string) => unknown | Promise<unknown>;
   serverLoaderRegistry: Map<string, ServerLoader>;
   serverGuardRegistry: Map<string, (() => Promise<GuardFn[]>)[]>;

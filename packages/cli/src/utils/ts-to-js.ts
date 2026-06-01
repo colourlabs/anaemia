@@ -3,7 +3,7 @@ import path from "node:path";
 import { transform } from "sucrase";
 import logger from "./logger.js";
 
-export function convertTypeScriptToJs(dir: string): void {
+export function convertTypeScriptToJs(dir: string, isRoot: boolean = true): void {
   const files = fs.readdirSync(dir);
 
   for (const file of files) {
@@ -11,10 +11,11 @@ export function convertTypeScriptToJs(dir: string): void {
     const stat = fs.statSync(fullPath);
 
     if (stat.isDirectory()) {
-      convertTypeScriptToJs(fullPath);
+      convertTypeScriptToJs(fullPath, false);
       continue;
     }
 
+    if (file.endsWith(".d.ts") || file.endsWith(".d.tsx")) continue;
     if (!file.endsWith(".ts") && !file.endsWith(".tsx")) continue;
 
     const isTsx = file.endsWith(".tsx");
@@ -27,7 +28,10 @@ export function convertTypeScriptToJs(dir: string): void {
         production: true,
       });
 
-      const cleaned = compiled.code.replace(/\n{3,}/g, "\n\n").trimStart();
+      const cleaned = compiled.code
+        .replace(/\n{3,}/g, "\n\n")
+        .trimStart()
+        .replace(/\.tsx(?=['"`])/g, ".jsx");
 
       const newPath = fullPath.replace(/\.tsx?$/, isTsx ? ".jsx" : ".js");
       fs.writeFileSync(newPath, cleaned, "utf8");
@@ -40,5 +44,27 @@ export function convertTypeScriptToJs(dir: string): void {
   const tsconfigPath = path.join(dir, "tsconfig.json");
   if (fs.existsSync(tsconfigPath)) {
     fs.unlinkSync(tsconfigPath);
+  }
+
+  if (isRoot) {
+    const jsconfigPath = path.join(dir, "jsconfig.json");
+    const jsconfig = {
+      compilerOptions: {
+        baseUrl: ".",
+        checkJs: false,
+        jsx: "preserve",
+        jsxImportSource: "solid-js",
+        paths: {
+          "~/*": ["./src/*"],
+          "@core/*": ["./src/core/*"],
+          "@shared/*": ["./src/shared/*"],
+          "@features/*": ["./src/features/*"],
+        },
+      },
+      include: ["src", "./anaemia.config.js", "./anaemia.d.ts"],
+      exclude: ["node_modules", "dist", ".anaemia"],
+    };
+
+    fs.writeFileSync(jsconfigPath, JSON.stringify(jsconfig, null, 2) + "\n", "utf8");
   }
 }

@@ -48,7 +48,7 @@ export async function getRspackConfig(
         ? pc.red("✖ [error]")
         : diagnostic.severity === "warning"
           ? pc.yellow("⚠ [warning]")
-          : pc.cyan("› [info]");
+          : pc.cyan("> [info]");
 
     const loc = diagnostic.line ? pc.dim(`:${diagnostic.line}`) : "";
     const file = pc.bold(diagnostic.filePath);

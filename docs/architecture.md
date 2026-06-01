@@ -4,17 +4,21 @@
 
 anaemia splits compilation into two parallel Rspack compilation pipelines: a Client compiler (targeting `web`) and a server compiler (targetting `node`). This allows developers to author monolithic SolidJS codebases that run seamlessly across the server/client boundary.
 
-```
+```mermaid
 graph TD
     A[App Root] --> B[scanRoutes / scanServerRoutes]
-    B --> C[Generate .anaemia/ Router Manifests]
-    C --> D[getRspackConfig]
+    B --> C[collectAnalyzerFiles]
+    C --> D[parseAnalyzerFile / oxc-parser]
+    D --> E[diagnostics / warnings]
+    D --> F[extractRouteMetadata]
+    F --> G[Generate .anaemia/ Router Manifests]
+    G --> H[getRspackConfig]
 
-    D --> E[Client Compiler Target: web]
-    D --> F[Server Compiler Target: node]
+    H --> I[Client Compiler Target: web]
+    H --> J[Server Compiler Target: node]
 
-    E --> G[dist/client/assets/]
-    F --> H[dist/server/index.js]
+    I --> K[dist/client/assets/]
+    J --> L[dist/server/index.js]
 ```
 
 ### 1. static analysis & virtual entrypoints
@@ -42,6 +46,8 @@ export function getAliases(appRoot: string) {
 
 this decouples the underlying framework runtime from concrete file structural locations. The core engine simply imports "anaemia-user-app", and Rspack maps this straight
 the virtual routing entry.
+
+---
 
 ### 2. dual-compiler splits
 
@@ -96,3 +102,45 @@ anaemia allows seamless execution of server-side logic inside client components 
 2. deterministic targeting: using code mapping variables (file path + token character position), a cryptographic hash is mapped to the entry location.
 
 3. network synthesis: the function is rewritten to use `@anaemia/core`'s internal HTTP payload manager (`$$executeClientRpc`). when invoked in the browser, it seamlessly triggers an automated POST request containing the arguments payload targeting the specific function hash.
+
+Here's how you could extend the architecture doc with those two sections:
+
+---
+
+### 4. static analysis pipeline
+
+before compilation begins, anaemia runs a full AST analysis pass over the user's application using `oxc-parser`. this catches structural and architectural issues at build time rather than runtime.
+
+```mermaid
+graph TD
+    A[collectAnalyzerFiles] --> B[parseAnalyzerFile / oxc-parser]
+    B --> C[per-file diagnostics]
+    B --> D[cross-file diagnostics]
+    C --> E[checkEnvAccess]
+    C --> F[checkAliasImports]
+    C --> G[checkMissingRouteExport]
+    D --> H[checkUnusedServerFunctions]
+    B --> I[extractRouteMetadata]
+    I --> J[manifest generation]
+```
+
+the analyzer classifies every file in the project by kind (`route`, `server-route`, `root`, `config`, `source`) and runs targeted checks against each:
+
+- **env access** - warns when client files access `process.env` or non-`PUBLIC_` prefixed `import.meta.env` variables that would be undefined in the browser
+- **alias imports** - warns when relative imports escape into aliased directories (`@core`, `@shared`, `@features` etc) and suggests the correct alias
+- **missing route exports** - errors when a route file has no default export, which would cause a silent runtime failure
+- **unused server functions** - cross-file check that warns when a `runOnServer()` definition is never imported anywhere in the application
+
+route metadata extracted during this pass feeds directly into the manifest generation step, giving the compiler accurate static information about which routes are dynamic, have guards, or use server functions.
+
+---
+
+### 5. environment variable injection
+
+anaemia enforces a strict client/server environment variable boundary at both static analysis and compile time.
+
+- **`PUBLIC_` prefix convention** — only variables prefixed with `PUBLIC_` are safe to access in client code. the static analyzer warns on violations before the build runs.
+- **build-time injection** — the bundler reads `.env` files and injects `PUBLIC_` variables into the client bundle via Rspack's `DefinePlugin`, replacing `import.meta.env.PUBLIC_*` references with their literal values at compile time. server-only variables are never included in the client compilation pass.
+- **runtime server env** — server-side variables are loaded at boot time and accessed via `import.meta.env` in server routes and `.server.ts` files, where the full environment is available without restriction.
+
+this means client bundles can never accidentally ship secrets - the boundary is enforced at the analyser, the compiler, and the module replacement level simultaneously.

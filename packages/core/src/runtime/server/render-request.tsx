@@ -73,7 +73,7 @@ function createHtmlResponseStream(args: {
   renderStream: SolidStream | string;
   afterEntry: () => string;
   store: Map<string, unknown>;
-  onComplete?: (html: string) => void; // called with full HTML when done
+  onComplete?: (html: string) => void;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const collected: string[] = [];

@@ -52,10 +52,13 @@ function createTmpProject() {
     `export const getToken = () => import.meta.env.SECRET_TOKEN;`,
   );
 
-  // feature component with non-PUBLIC_ env - should warn
+  // feature component with non-PUBLIC_ env - should warn & importing from aliased dir with relative path - should warn
   fs.writeFileSync(
     path.join(dir, "src/features/auth/components/Login.tsx"),
-    `export function Login() { return <form action={import.meta.env.AUTH_URL} />; }`,
+    `
+    import { authService } from "../../../core/services/auth";
+    export function Login() { return <form action={import.meta.env.AUTH_URL} />; }
+    `,
   );
 
   // server function definition
@@ -75,6 +78,24 @@ function createTmpProject() {
     import { getUser } from "../../features/auth/components/actions.server";
     export default function UserPage() { return <h1>{import.meta.env.PUBLIC_API_URL}</h1>; }
   `,
+  );
+
+  // already using alias - should not warn
+  fs.writeFileSync(
+    path.join(dir, "src/shared/utils/format.ts"),
+    `
+    import { something } from "@core/services/auth";
+    export const format = () => {};
+    `,
+  );
+
+  // relative import within same directory - should not warn
+  fs.writeFileSync(
+    path.join(dir, "src/features/auth/components/Button.tsx"),
+    `
+    import { styles } from "./styles";
+    export function Button() { return <button />; }
+    `,
   );
 
   return dir;
@@ -302,6 +323,143 @@ test("walkAst visits all expected node types", async () => {
     assert.ok(seen.has("Program"));
     assert.ok(seen.has("ImportDeclaration"));
     assert.ok(seen.has("ExportDefaultDeclaration"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// alias imports
+
+test("alias check: relative import escaping into aliased dir warns", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("Login.tsx"),
+    );
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].message.includes("../../../core/services/auth"));
+    assert.ok(warnings[0].help.includes("@core"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("alias check: already using alias does not warn", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("format.ts"),
+    );
+    assert.equal(warnings.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("alias check: same-directory relative import does not warn", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("Button.tsx"),
+    );
+    assert.equal(warnings.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("alias check: help message suggests correct alias", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warning = result.diagnostics.find(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("Login.tsx"),
+    );
+    assert.ok(warning);
+    assert.ok(warning.help.includes("@core/services/auth"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("alias check: dynamic import with relative escape warns", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/features/auth"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "src/features/auth/lazy.ts"),
+      `export const load = () => import("../../shared/utils/format");`,
+    );
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("lazy.ts"),
+    );
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].help.includes("@shared"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// missing route export
+
+test("missing route export: route with default export passes", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const errors = result.diagnostics.filter(
+      (d) => d.code === "MISSING_ROUTE_EXPORT" && d.filePath?.includes("routes/index.tsx"),
+    );
+    assert.equal(errors.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("missing route export: route without default export errors", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/routes"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "src/routes/index.tsx"),
+      `export function notDefault() { return <div />; }`,
+    );
+    const result = await analyzeApp(dir, { mode: "test" });
+    const errors = result.diagnostics.filter((d) => d.code === "MISSING_ROUTE_EXPORT");
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].message.includes("routes/index.tsx"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("missing route export: re-exported default passes", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/routes"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "src/routes/index.tsx"),
+      `import { Page } from "../features/home"; export { Page as default };`,
+    );
+    const result = await analyzeApp(dir, { mode: "test" });
+    const errors = result.diagnostics.filter((d) => d.code === "MISSING_ROUTE_EXPORT");
+    assert.equal(errors.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("missing route export: server-route is not checked", async () => {
+  const dir = createTmpProject();
+  try {
+    const result = await analyzeApp(dir, { mode: "test" });
+    const errors = result.diagnostics.filter(
+      (d) => d.code === "MISSING_ROUTE_EXPORT" && d.filePath?.includes("_route.ts"),
+    );
+    assert.equal(errors.length, 0);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

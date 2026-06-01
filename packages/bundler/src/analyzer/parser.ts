@@ -3,7 +3,10 @@ import path from "node:path";
 import { parseSync } from "oxc-parser";
 import type { ParserOptions } from "oxc-parser";
 import type { AnalyzerDiagnostic, AnalyzerFileKind, ParsedAnalyzerFile, ParserError, SourceLocation } from "./types.js";
+
 import { checkEnvAccess } from "./checks/env-access.js";
+import { checkAliasImports } from "./checks/alias-imports.js";
+import { checkMissingRouteExport } from "./checks/missing-route-export.js";
 
 const DEFAULT_PARSE_OPTIONS: ParserOptions = {
   sourceType: "module",
@@ -84,7 +87,12 @@ export function parseAnalyzerFile(appRoot: string, filePath: string, options: Pa
       diagnostics: [],
     };
 
-    const diagnostics = [...parseDiagnostics, ...checkEnvAccess(file)];
+    const diagnostics = [
+      ...parseDiagnostics,
+      ...checkEnvAccess(file),
+      ...checkAliasImports(file),
+      ...checkMissingRouteExport(file),
+    ];
 
     return { ...file, diagnostics };
   } catch (error) {

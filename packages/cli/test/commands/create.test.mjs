@@ -77,3 +77,41 @@ test("convertTypeScriptToJs removes tsconfig.json", async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("convertTypeScriptToJs does not convert d.ts to d.js", async () => {
+  const dir = createTmpDir();
+  try {
+    fs.writeFileSync(path.join(dir, "types.d.ts"), `export type MyType = string;\n`);
+    const { convertTypeScriptToJs } = await import("../../dist/utils/ts-to-js.js");
+    convertTypeScriptToJs(dir);
+    assert.ok(!fs.existsSync(path.join(dir, "types.d.js")), "types.d.js should not be created");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("convertTypeScriptToJs creates jsconfig.json with correct config", async () => {
+  const dir = createTmpDir();
+  try {
+    const { convertTypeScriptToJs } = await import("../../dist/utils/ts-to-js.js");
+    convertTypeScriptToJs(dir);
+    
+    const jsconfigPath = path.join(dir, "jsconfig.json");
+    assert.ok(fs.existsSync(jsconfigPath), "jsconfig.json should be created");
+    
+    const jsconfig = JSON.parse(fs.readFileSync(jsconfigPath, "utf-8"));
+    assert.equal(jsconfig.compilerOptions.baseUrl, ".");
+    assert.equal(jsconfig.compilerOptions.jsx, "preserve");
+    assert.equal(jsconfig.compilerOptions.jsxImportSource, "solid-js");
+    assert.equal(jsconfig.compilerOptions.checkJs, false);
+    assert.deepEqual(jsconfig.compilerOptions.paths["~/*"], ["./src/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@core/*"], ["./src/core/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@shared/*"], ["./src/shared/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@features/*"], ["./src/features/*"]);
+    assert.ok(jsconfig.include.includes("./anaemia.d.ts"));
+    assert.ok(jsconfig.include.includes("./anaemia.config.js"));
+    assert.ok(jsconfig.exclude.includes("node_modules"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

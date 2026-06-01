@@ -53,3 +53,7 @@ export type AnalyzerResult = {
 };
 
 export type ParserError = OxcError;
+
+export type ExportSpecifier = {
+  exported?: { name?: string };
+};

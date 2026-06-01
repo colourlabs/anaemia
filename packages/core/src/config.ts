@@ -81,3 +81,7 @@ export interface AnaemiaConfig {
 export function defineConfig(config: AnaemiaConfig): AnaemiaConfig {
   return config;
 }
+
+export function definePlugin(plugin: AnaemiaPlugin): AnaemiaPlugin {
+  return plugin;
+}

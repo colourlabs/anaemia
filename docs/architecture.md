@@ -21,6 +21,8 @@ graph TD
     J --> L[dist/server/index.js]
 ```
 
+---
+
 ### 1. static analysis & virtual entrypoints
 
 before Rspack kicks off asset analysis, the framework performs a pre-bundling orchestration step to discover user application routes dynamically.
@@ -76,6 +78,8 @@ output: { module: true, chunkFormat: "module", chunkLoading: "import" }
 
 server hash injection: utilizes a custom `serverHashInjector` plugin inside its Babel ruleset. this acts as an identification step for server functions, ensuring client RPC calls mapping to the backend can resolve their execution blocks securely via hash tokens.
 
+---
+
 ### 3. multi-tier HMR bridge
 
 during development configurations, anaemia operates a multi-tiered socket architecture to bypass unbundled ESM network waterfalls while keeping hot reload states intact.
@@ -103,13 +107,11 @@ anaemia allows seamless execution of server-side logic inside client components 
 
 3. network synthesis: the function is rewritten to use `@anaemia/core`'s internal HTTP payload manager (`$$executeClientRpc`). when invoked in the browser, it seamlessly triggers an automated POST request containing the arguments payload targeting the specific function hash.
 
-Here's how you could extend the architecture doc with those two sections:
-
 ---
 
 ### 4. static analysis pipeline
 
-before compilation begins, anaemia runs a full AST analysis pass over the user's application using `oxc-parser`. this catches structural and architectural issues at build time rather than runtime.
+before compilation begins, anaemia runs a full AST analysis pass over the user's application using [`oxc-parser`](https://oxc.rs/docs/contribute/parser.html). this catches structural and architectural issues at build time rather than runtime.
 
 ```mermaid
 graph TD
@@ -139,8 +141,8 @@ route metadata extracted during this pass feeds directly into the manifest gener
 
 anaemia enforces a strict client/server environment variable boundary at both static analysis and compile time.
 
-- **`PUBLIC_` prefix convention** — only variables prefixed with `PUBLIC_` are safe to access in client code. the static analyzer warns on violations before the build runs.
-- **build-time injection** — the bundler reads `.env` files and injects `PUBLIC_` variables into the client bundle via Rspack's `DefinePlugin`, replacing `import.meta.env.PUBLIC_*` references with their literal values at compile time. server-only variables are never included in the client compilation pass.
-- **runtime server env** — server-side variables are loaded at boot time and accessed via `import.meta.env` in server routes and `.server.ts` files, where the full environment is available without restriction.
+- **`PUBLIC_` prefix convention** - only variables prefixed with `PUBLIC_` are safe to access in client code. the static analyzer warns on violations before the build runs.
+- **build-time injection** - the bundler reads `.env` files and injects `PUBLIC_` variables into the client bundle via Rspack's `DefinePlugin`, replacing `import.meta.env.PUBLIC_*` references with their literal values at compile time. server-only variables are never included in the client compilation pass.
+- **runtime server env** - server-side variables are loaded at boot time and accessed via `import.meta.env` in server routes and `.server.ts` files, where the full environment is available without restriction.
 
 this means client bundles can never accidentally ship secrets - the boundary is enforced at the analyser, the compiler, and the module replacement level simultaneously.

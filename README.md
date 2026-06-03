@@ -62,7 +62,7 @@ pnpm install
 pnpm run dev
 ```
 
-Your application will boot with an HMR bridge link running natively at `http://localhost:3000` or the port you configure in `anaemia.config.ts`.
+Your application will boot with an HMR bridge link running natively at `http://localhost:3000` or the port you configure in `anaemia.config.ts/js`.
 
 ## embedded code generation
 
@@ -84,8 +84,9 @@ anaemia create page:dashboard/analytics
 anaemia is managed as a pnpm monorepo workspace:
 
 - `packages/core` - Core SSR runtime, state hydration, and framework primitives.
-- `packages/bundler` - Custom Rspack compiler configurations for server/client.
+- `packages/bundler` - Custom Rspack compiler configurations for server/client & AST code analyzer built with [`oxc-parser`](https://oxc.rs/docs/contribute/parser.html).
 - `packages/cli` - Scaffolding engine and dev/build orchestration binary.
+- `packages/plugin-mdx` - [MDX](https://mdxjs.com/) support plugin for anaemia.
 - `templates/base-app` - The default engineering blueprint used by `anaemia create`.
 
 ## documentation

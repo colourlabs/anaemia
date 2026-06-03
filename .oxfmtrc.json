@@ -5,5 +5,5 @@
   "printWidth": 120,
   "tabWidth": 2,
   "bracketSpacing": true,
-  "ignorePatterns": ["dist", "node_modules", "packages/*/dist", "packages/*/node_modules", "*/.anaemia"]
+  "ignorePatterns": ["**/node_modules", "**/dist", "**/.anaemia"]
 }

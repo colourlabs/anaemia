@@ -22,6 +22,8 @@ import { getClientOptimization, getPerformanceProfile } from "./optimization.js"
 import loadEnvFiles from "./env-loader.js";
 
 import { analyzeApp } from "./analyzer/index.js";
+import resolveUserConfig from "./resolve-configs.js";
+import { syncCssModuleTypes } from "./styles/css-modules.js";
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +35,7 @@ export async function getRspackConfig(
 ): Promise<[Configuration, Configuration]> {
   const isDev = process.env.NODE_ENV !== "production";
   loadEnvFiles(appRoot, process.env.NODE_ENV || "development");
+  const cssModuleTypeDiagnostics = syncCssModuleTypes(appRoot, config.styles?.typedModules);
 
   // run the analyzer to collect route metadata and other information about the app that we can use to optimize the build
   const analysis = await analyzeApp(appRoot, {
@@ -42,7 +45,7 @@ export async function getRspackConfig(
   // flush diagnostics to console
   const tag = pc.dim("[anaemia-analyzer]");
 
-  for (const diagnostic of analysis.diagnostics) {
+  for (const diagnostic of [...cssModuleTypeDiagnostics, ...analysis.diagnostics]) {
     const prefix =
       diagnostic.severity === "error"
         ? pc.red("✖ [error]")
@@ -70,7 +73,7 @@ export async function getRspackConfig(
 
   const routes = await scanRoutes(appRoot);
   const serverRoutes = scanServerRoutes(appRoot);
-  writeManifest(appRoot, routes, analysis.routeMetadata);
+  writeManifest(appRoot, routes, analysis.routeMetadata, analysis.cssModules);
 
   const frameworkInternalDir = path.resolve(appRoot, "./.anaemia");
   if (!fs.existsSync(frameworkInternalDir)) {
@@ -138,7 +141,7 @@ export async function getRspackConfig(
       client: [...(isDev ? [require.resolve("solid-refresh")] : []), path.resolve(runtimeDir, "entry-client.jsx")],
     },
     output: {
-      path: path.resolve(appRoot, "./dist/client"),
+      path: path.resolve(appRoot, "./.anaemia/client"),
       filename: isDev ? "assets/[name].js" : "assets/[name].[contenthash:8].js",
       chunkFilename: isDev ? "assets/[name].chunk.js" : "assets/[name].[contenthash:8].chunk.js",
       cssFilename: isDev ? "assets/[name].css" : "assets/[name].[contenthash:8].css",
@@ -233,7 +236,7 @@ export async function getRspackConfig(
     target: "node",
     entry: { server: path.resolve(runtimeDir, "entry-server.jsx") },
     output: {
-      path: path.resolve(appRoot, "./dist/server"),
+      path: path.resolve(appRoot, "./.anaemia/server"),
       filename: "index.js",
       module: true,
       chunkFormat: "module",
@@ -248,7 +251,7 @@ export async function getRspackConfig(
         "solid-refresh": require.resolve("solid-refresh"),
         "@anaemia/core/config": path.resolve(coreRuntimeDir, "./dist/config.js"),
         "@anaemia/core": path.resolve(coreRuntimeDir, "./dist/index.js"),
-        __anaemia_user_config__: path.resolve(appRoot, "./anaemia.config.ts"),
+        __anaemia_user_config__: resolveUserConfig(appRoot),
         __anaemia_server_routes__: serverRoutesFile,
       },
     },

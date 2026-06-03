@@ -1,5 +1,8 @@
 import type { Comment, EcmaScriptModule, OxcError, Program } from "oxc-parser";
 import type { RouteMetadata } from "./checks/route-metadata.js";
+import type { CssModuleInfo } from "../styles/css-modules.js";
+
+export type { CssModuleInfo } from "../styles/css-modules.js";
 
 type AnalyzerSeverity = "error" | "warning" | "info";
 
@@ -50,6 +53,7 @@ export type AnalyzerResult = {
   files: ParsedAnalyzerFile[];
   diagnostics: AnalyzerDiagnostic[];
   routeMetadata: RouteMetadata[];
+  cssModules: CssModuleInfo[];
 };
 
 export type ParserError = OxcError;

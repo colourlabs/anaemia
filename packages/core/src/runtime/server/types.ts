@@ -2,8 +2,23 @@ import type { StatusCode } from "hono/utils/http-status";
 
 export interface ChunkAssets {
   js?: string[];
-  css?: string[];
+  css?: Array<string | ChunkCssAsset>;
 }
+
+export type ChunkCssAsset = {
+  href: string;
+  critical?: boolean;
+  content?: string;
+  defer?: boolean;
+  media?: string;
+  size?: number;
+  modules?: Array<{
+    filePath: string;
+    classes: string[];
+    usedClasses?: string[];
+    unusedClasses?: string[];
+  }>;
+};
 
 export type RouteManifest = {
   routes: Array<{
@@ -14,9 +29,20 @@ export type RouteManifest = {
     hasLoader: boolean;
     hasGuard: boolean;
     serverFunctionIds: string[];
+    cssModules?: CssModuleInfo[];
   }>;
   chunks: Record<string, ChunkAssets>;
+  cssModules?: CssModuleInfo[];
   errors?: Record<string, string>;
+};
+
+export type CssModuleInfo = {
+  filePath: string;
+  relativePath: string;
+  classes: string[];
+  usedClasses: string[];
+  unusedClasses: string[];
+  importers: string[];
 };
 
 export type RouteMatch = {

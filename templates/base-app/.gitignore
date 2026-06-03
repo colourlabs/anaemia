@@ -1,5 +1,4 @@
 node_modules/
-dist/
 .anaemia/
 .rspack/
 .env

@@ -50,10 +50,12 @@ export function convertTypeScriptToJs(dir: string, isRoot: boolean = true): void
     const jsconfigPath = path.join(dir, "jsconfig.json");
     const jsconfig = {
       compilerOptions: {
-        baseUrl: ".",
+        module: "ESNext",
+        moduleResolution: "bundler",
         checkJs: false,
         jsx: "preserve",
         jsxImportSource: "solid-js",
+        rootDirs: [".", "./.anaemia/generated/css-modules"],
         paths: {
           "~/*": ["./src/*"],
           "@core/*": ["./src/core/*"],
@@ -61,8 +63,8 @@ export function convertTypeScriptToJs(dir: string, isRoot: boolean = true): void
           "@features/*": ["./src/features/*"],
         },
       },
-      include: ["src", "./anaemia.config.js", "./anaemia.d.ts"],
-      exclude: ["node_modules", "dist", ".anaemia"],
+      include: ["src", "./anaemia.config.js", "./anaemia.d.ts", "./.anaemia/generated/css-modules/**/*.d.ts"],
+      exclude: ["node_modules", "dist", "./.anaemia/build"],
     };
 
     fs.writeFileSync(jsconfigPath, JSON.stringify(jsconfig, null, 2) + "\n", "utf8");

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { analyzeApp, walkAst } from "../dist/analyzer/index.js";
+import { syncCssModuleTypes } from "../dist/styles/css-modules.js";
 
 function createTmpProject() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
@@ -380,6 +381,68 @@ test("alias check: help message suggests correct alias", async () => {
     );
     assert.ok(warning);
     assert.ok(warning.help.includes("@core/services/auth"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// CSS modules
+
+test("css modules: records classes and usage metadata", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-css-module-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/routes"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "src/routes/index.tsx"),
+      `
+      import styles from "./home.module.scss";
+      export default function Home() {
+        return <div class={styles.hero}>{styles["missing"]}</div>;
+      }
+      `,
+    );
+    fs.writeFileSync(
+      path.join(dir, "src/routes/home.module.scss"),
+      `
+      .hero { color: red; }
+      .unused { color: blue; }
+      `,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const cssModule = result.cssModules.find((moduleInfo) => moduleInfo.relativePath === "src/routes/home.module.scss");
+
+    assert.ok(cssModule);
+    assert.deepEqual(cssModule.classes, ["hero", "unused"]);
+    assert.deepEqual(cssModule.usedClasses, ["hero", "missing"]);
+    assert.deepEqual(cssModule.unusedClasses, ["unused"]);
+    assert.deepEqual(cssModule.importers, ["src/routes/index.tsx"]);
+
+    assert.equal(result.diagnostics.filter((d) => d.code === "CSS_MODULE_UNKNOWN_CLASS").length, 1);
+    assert.equal(result.diagnostics.filter((d) => d.code === "CSS_MODULE_UNUSED_CLASS").length, 1);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("css modules: emits and checks declaration files", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-css-module-types-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/components"), { recursive: true });
+    const cssPath = path.join(dir, "src/components/Card.module.css");
+    const dtsPath = `${cssPath}.d.ts`;
+    fs.writeFileSync(cssPath, `.root { color: red; } .title-text { color: blue; }`);
+
+    assert.deepEqual(syncCssModuleTypes(dir, "emit"), []);
+    const declaration = fs.readFileSync(dtsPath, "utf-8");
+    assert.match(declaration, /readonly "root": string;/);
+    assert.match(declaration, /readonly "title-text": string;/);
+    assert.match(declaration, /export const root: string;/);
+
+    fs.writeFileSync(dtsPath, "stale");
+    const diagnostics = syncCssModuleTypes(dir, "check");
+    assert.equal(diagnostics.length, 1);
+    assert.equal(diagnostics[0].code, "CSS_MODULE_TYPES_STALE");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

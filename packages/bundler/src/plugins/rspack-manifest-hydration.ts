@@ -15,7 +15,7 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
 
   apply(compiler: Compiler) {
     compiler.hooks.emit.tap("AnaemiaManifestHydrationPlugin", (compilation) => {
-      const manifestPath = path.resolve(this.appRoot, "./dist/route-manifest.json");
+      const manifestPath = path.resolve(this.appRoot, "./.anaemia/route-manifest.json");
 
       if (!fs.existsSync(manifestPath)) return;
 
@@ -42,7 +42,10 @@ export class AnaemiaManifestHydrationPlugin implements RspackPluginInstance {
           if (jsFiles.length > 0 || cssFiles.length > 0) {
             currentManifest.chunks[chunk.name] = {
               js: jsFiles.map((f) => `/${f}`),
-              css: cssFiles.map((f) => `/${f}`),
+              css: cssFiles.map((f) => ({
+                href: `/${f}`,
+                size: compilation.assets[f].size(),
+              })),
             };
           }
         }

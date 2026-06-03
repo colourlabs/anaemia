@@ -9,7 +9,9 @@ overrides:
   '@rspack/binding': ^2.0.5
   '@rspack/dev-server': ^2.0.2
   '@anaemia/core': workspace:*
+  '@anaemia/bundler': workspace:*
   '@anaemia/cli': workspace:*
+  '@anaemia/plugin-mdx': workspace:*
 
 importers:
 
@@ -116,8 +118,8 @@ importers:
   packages/cli:
     dependencies:
       '@anaemia/bundler':
-        specifier: ^0.5.2
-        version: 0.5.2(solid-js@1.9.13)
+        specifier: workspace:*
+        version: link:../bundler
       '@anaemia/core':
         specifier: workspace:*
         version: link:../core
@@ -262,9 +264,6 @@ importers:
         version: 5.9.3
 
 packages:
-
-  '@anaemia/bundler@0.5.2':
-    resolution: {integrity: sha512-orX24BHOiMkgoQND85wQsV7JKZnVFqIRwjv9qdK9E9b8vADg6jpm5KwBkITt+gXGV7MKEeJNUbv7AEs7no+lzQ==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2439,32 +2438,6 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
-
-  '@anaemia/bundler@0.5.2(solid-js@1.9.13)':
-    dependencies:
-      '@anaemia/core': link:packages/core
-      '@babel/core': 7.29.7
-      '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
-      '@rspack/core': 2.0.5
-      babel-loader: 10.1.1(@babel/core@7.29.7)(@rspack/core@2.0.5)
-      babel-preset-solid: 1.9.12(@babel/core@7.29.7)(solid-js@1.9.13)
-      dotenv: 17.4.2
-      dotenv-expand: 13.0.0
-      glob: 13.0.6
-      jiti: 2.7.0
-      oxc-parser: 0.133.0
-      picocolors: 1.1.1
-      sass: 1.100.0
-      sass-loader: 17.0.0(@rspack/core@2.0.5)(sass@1.100.0)
-      solid-refresh: 0.7.8(solid-js@1.9.13)
-      sucrase: 3.35.1
-    transitivePeerDependencies:
-      - '@module-federation/runtime-tools'
-      - '@swc/helpers'
-      - sass-embedded
-      - solid-js
-      - supports-color
-      - webpack
 
   '@babel/code-frame@7.29.7':
     dependencies:

@@ -5,6 +5,7 @@ export default defineConfig({
   styles: {
     sass: true,
     modules: true,
+    typedModules: true,
   },
   plugins: [
     anaemiaLightningCssPlugin({

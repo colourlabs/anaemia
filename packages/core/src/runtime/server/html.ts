@@ -1,7 +1,23 @@
 import { ENTRY_ATTRIBUTE } from "../shared/constants.js";
-import type { ChunkAssets, RouteManifest } from "./types.js";
+import type { ChunkAssets, ChunkCssAsset, RouteManifest } from "./types.js";
+import type { AnaemiaPlugin, SSRDocument, SSRDocumentAttributes, SSRDocumentContext } from "../../config.js";
 
 const ENTRY_TAG_REGEX = /(<([a-zA-Z0-9-]+)[^>]*anaemia-entry[^>]*>)(.*?)(<\/\2>)/is;
+const HTML_OPEN_REGEX = /<html\b([^>]*)>/i;
+const BODY_OPEN_REGEX = /<body\b([^>]*)>/i;
+const HEAD_BLOCK_REGEX = /<head\b[^>]*>(.*?)<\/head>/is;
+const BODY_BLOCK_REGEX = /<body\b[^>]*>(.*?)<\/body>/is;
+const TITLE_REGEX = /<title\b[^>]*>(.*?)<\/title>/is;
+const META_TAG_REGEX = /<meta\b([^>]*)>/gis;
+const LINK_TAG_REGEX = /<link\b([^>]*)>/gis;
+const SCRIPT_TAG_REGEX = /<script\b([^>]*)>(.*?)<\/script>/gis;
+
+type SSRDocumentInternals = {
+  entryOpen: string;
+  entryClose: string;
+};
+
+const documentInternals = new WeakMap<SSRDocument, SSRDocumentInternals>();
 
 function normalizeAssetUrl(url: unknown): string {
   if (!url || typeof url !== "string") return "";
@@ -9,22 +25,109 @@ function normalizeAssetUrl(url: unknown): string {
   return url.startsWith("/") ? url : `/${url}`;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escapeText(value: unknown): string {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function parseAttributes(source: string | undefined): SSRDocumentAttributes {
+  const attrs: SSRDocumentAttributes = {};
+  if (!source) return attrs;
+
+  const attrRegex = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>]+)))?/g;
+  let match: RegExpExecArray | null;
+  while ((match = attrRegex.exec(source))) {
+    const name = match.at(1);
+    if (!name) continue;
+    attrs[name] = match.at(2) ?? match.at(3) ?? match.at(4) ?? true;
+  }
+  return attrs;
+}
+
+function serializeAttributes(attrs: SSRDocumentAttributes): string {
+  return Object.entries(attrs)
+    .filter(([, value]) => value !== false && value !== null && value !== undefined)
+    .map(([key, value]) => (value === true ? key : `${key}="${escapeHtml(value)}"`))
+    .join(" ");
+}
+
+function serializeTag(name: string, attrs: SSRDocumentAttributes, children?: string): string {
+  const serializedAttrs = serializeAttributes(attrs);
+  const open = serializedAttrs ? `<${name} ${serializedAttrs}>` : `<${name}>`;
+  if (children === undefined) return open;
+  return `${open}${children}</${name}>`;
+}
+
+function stripManagedHeadTags(head: string): string {
+  return head
+    .replace(TITLE_REGEX, "")
+    .replace(META_TAG_REGEX, "")
+    .replace(LINK_TAG_REGEX, "")
+    .replace(SCRIPT_TAG_REGEX, "")
+    .trim();
+}
+
+function extractEntryBodySlots(template: string): {
+  beforeEntry: string[];
+  entryOpen: string;
+  entryClose: string;
+  afterEntry: string[];
+} {
+  const body = BODY_BLOCK_REGEX.exec(template)?.[1] ?? template;
+  const entryMatch = ENTRY_TAG_REGEX.exec(body);
+
+  if (entryMatch) {
+    const [fullMatch, openTag, _tagName, _inner, closeTag] = entryMatch;
+    return {
+      beforeEntry: [body.slice(0, entryMatch.index)].filter(Boolean),
+      entryOpen: openTag,
+      entryClose: closeTag,
+      afterEntry: [body.slice(entryMatch.index + fullMatch.length)].filter(Boolean),
+    };
+  }
+
+  return {
+    beforeEntry: [body].filter(Boolean),
+    entryOpen: `<div ${ENTRY_ATTRIBUTE}>`,
+    entryClose: "</div>",
+    afterEntry: [],
+  };
+}
+
+function normalizeCssAsset(cssFile: string | ChunkCssAsset): ChunkCssAsset {
+  return typeof cssFile === "string" ? { href: cssFile } : cssFile;
+}
+
+function cssAssetTag(cssFile: string | ChunkCssAsset): string {
+  const asset = normalizeCssAsset(cssFile);
+  const href = normalizeAssetUrl(asset.href);
+  const media = asset.media ? ` media="${escapeHtml(asset.media)}"` : "";
+
+  if (asset.critical && asset.content) {
+    return `<style data-anaemia-critical-css="${escapeHtml(href)}">${asset.content}</style>\n`;
+  }
+
+  if (asset.defer) {
+    return `<link rel="preload" href="${href}" as="style"${media} onload="this.onload=null;this.rel='stylesheet'">\n<noscript><link rel="stylesheet" href="${href}"${media}></noscript>\n`;
+  }
+
+  return `<link rel="stylesheet" href="${href}"${media}>\n`;
+}
+
 function chunkAssetTags(chunk: ChunkAssets | undefined): { scripts: string; styles: string } {
   if (!chunk) return { scripts: "", styles: "" };
+  const jsFiles = chunk.js ?? [];
+  const cssFiles = chunk.css ?? [];
 
   const scripts =
-    (chunk.js ?? "")
-      ? (Array.isArray(chunk.js) ? chunk.js : [chunk.js])
-          .map((jsFile) => `<script type="module" src="${normalizeAssetUrl(jsFile)}"></script>\n`)
-          .join("")
+    jsFiles.length > 0
+      ? jsFiles.map((jsFile) => `<script type="module" src="${normalizeAssetUrl(jsFile)}"></script>\n`).join("")
       : "";
 
-  const styles =
-    (chunk.css ?? "")
-      ? (Array.isArray(chunk.css) ? chunk.css : [chunk.css])
-          .map((cssFile) => `<link rel="stylesheet" href="${normalizeAssetUrl(cssFile)}">\n`)
-          .join("")
-      : "";
+  const styles = cssFiles.length > 0 ? cssFiles.map((cssFile) => cssAssetTag(cssFile)).join("") : "";
 
   return { scripts, styles };
 }
@@ -45,48 +148,110 @@ export function getRouteAssetTags(manifest: RouteManifest, activeChunk: string):
   );
 }
 
-export function createDevNoCacheHeadTags(isDev: boolean): string {
-  return isDev
-    ? `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">\n`
-    : "";
+export function createSSRDocumentFromTemplate(template: string): SSRDocument {
+  const head = HEAD_BLOCK_REGEX.exec(template)?.[1] ?? "";
+  const rawHeadNodes = stripManagedHeadTags(head);
+  const bodySlots = extractEntryBodySlots(template);
+
+  const doc: SSRDocument = {
+    htmlAttrs: parseAttributes(HTML_OPEN_REGEX.exec(template)?.[1]),
+    head: {
+      title: TITLE_REGEX.exec(head)?.[1]?.trim(),
+      meta: [...head.matchAll(META_TAG_REGEX)].map((match) => parseAttributes(match[1])),
+      links: [...head.matchAll(LINK_TAG_REGEX)].map((match) => parseAttributes(match[1])),
+      scripts: [...head.matchAll(SCRIPT_TAG_REGEX)].map((match) => ({
+        ...parseAttributes(match[1]),
+        children: match[2],
+      })),
+      nodes: rawHeadNodes ? [rawHeadNodes] : [],
+    },
+    bodyAttrs: parseAttributes(BODY_OPEN_REGEX.exec(template)?.[1]),
+    bodyStart: bodySlots.beforeEntry,
+    bodyEnd: bodySlots.afterEntry,
+  };
+
+  documentInternals.set(doc, {
+    entryOpen: bodySlots.entryOpen,
+    entryClose: bodySlots.entryClose,
+  });
+
+  return doc;
 }
 
-export function createHtmlStreamShell(args: {
-  template: string;
-  headInjections: string;
-  bodyStartInjections: string;
-  bodyInjections: string;
-}): {
+export async function applyPluginDocumentHooks(args: {
+  doc: SSRDocument;
+  ctx: SSRDocumentContext;
+  plugins: AnaemiaPlugin[];
+}): Promise<void> {
+  for (const plugin of args.plugins) {
+    await plugin.configureDocument?.(args.doc, args.ctx);
+
+    const [head, bodyStart, bodyEnd] = await Promise.all([
+      plugin.injectHead?.(),
+      plugin.injectBodyStart?.(),
+      plugin.injectBody?.(),
+    ]);
+
+    if (head) args.doc.head.nodes.push(head);
+    if (bodyStart) args.doc.bodyStart.push(bodyStart);
+    if (bodyEnd) args.doc.bodyEnd.push(bodyEnd);
+  }
+}
+
+export function applyFrameworkDocumentDefaults(args: {
+  doc: SSRDocument;
+  manifest: RouteManifest;
+  activeChunk: string;
+  isDev: boolean;
+  hydrationRuntimeScript: string;
+  hydrationDataScript: string;
+}): void {
+  const routeAssetTags = getRouteAssetTags(args.manifest, args.activeChunk);
+
+  if (args.isDev) {
+    args.doc.head.meta.push(
+      { "http-equiv": "Cache-Control", content: "no-cache, no-store, must-revalidate" },
+      { "http-equiv": "Pragma", content: "no-cache" },
+      { "http-equiv": "Expires", content: "0" },
+    );
+  }
+
+  args.doc.head.nodes.push(routeAssetTags.styles, args.hydrationRuntimeScript);
+  args.doc.bodyEnd.push(args.hydrationDataScript, routeAssetTags.scripts);
+}
+
+export function serializeHead(doc: SSRDocument): string {
+  return [
+    doc.head.title ? `<title>${escapeText(doc.head.title)}</title>` : "",
+    ...doc.head.meta.map((attrs) => `${serializeTag("meta", attrs)}\n`),
+    ...doc.head.links.map((attrs) => `${serializeTag("link", attrs)}\n`),
+    ...doc.head.scripts.map(({ children, ...attrs }) => `${serializeTag("script", attrs, children ?? "")}\n`),
+    ...doc.head.nodes,
+  ].join("");
+}
+
+export function createHtmlDocumentShell(doc: SSRDocument): {
   beforeEntry: string;
   afterEntry: string;
 } {
-  const templateWithHead = args.template.replace(/<head[^>]*>/, (match) => `${match}${args.headInjections}`);
-  const templateWithBodyStart = templateWithHead.replace(
-    /<body[^>]*>/,
-    (match) => `${match}${args.bodyStartInjections}`,
-  );
-
-  const entryMatch = ENTRY_TAG_REGEX.exec(templateWithBodyStart);
-  if (entryMatch) {
-    const [fullMatch, openTag, _tagName, _inner, closeTag] = entryMatch;
-    const beforeEntry = `${templateWithBodyStart.slice(0, entryMatch.index)}${openTag}`;
-    const afterEntry = `${closeTag}${templateWithBodyStart.slice(entryMatch.index + fullMatch.length)}`.replace(
-      "</body>",
-      `${args.bodyInjections}</body>`,
-    );
-    return { beforeEntry, afterEntry };
-  }
-
-  const bodyCloseIndex = templateWithBodyStart.lastIndexOf("</body>");
-  if (bodyCloseIndex >= 0) {
-    return {
-      beforeEntry: `${templateWithBodyStart.slice(0, bodyCloseIndex)}<div ${ENTRY_ATTRIBUTE}>`,
-      afterEntry: `</div>${args.bodyInjections}${templateWithBodyStart.slice(bodyCloseIndex)}`,
-    };
-  }
+  const htmlAttrs = serializeAttributes(doc.htmlAttrs);
+  const bodyAttrs = serializeAttributes(doc.bodyAttrs);
+  const internals = documentInternals.get(doc) ?? {
+    entryOpen: `<div ${ENTRY_ATTRIBUTE}>`,
+    entryClose: "</div>",
+  };
 
   return {
-    beforeEntry: `${templateWithBodyStart}<div ${ENTRY_ATTRIBUTE}>`,
-    afterEntry: `</div>${args.bodyInjections}`,
+    beforeEntry: [
+      "<!doctype html>",
+      htmlAttrs ? `<html ${htmlAttrs}>` : "<html>",
+      "<head>",
+      serializeHead(doc),
+      "</head>",
+      bodyAttrs ? `<body ${bodyAttrs}>` : "<body>",
+      ...doc.bodyStart,
+      internals.entryOpen,
+    ].join(""),
+    afterEntry: [internals.entryClose, ...doc.bodyEnd, "</body></html>"].join(""),
   };
 }

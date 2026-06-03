@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "strict": true,
     "isolatedModules": true,
-    "baseUrl": ".",
+    "rootDirs": [".", "./.anaemia/generated/css-modules"],
     "paths": {
       "~/*": ["./src/*"],
       "@core/*": ["./src/core/*"],
@@ -17,6 +17,6 @@
       "@features/*": ["./src/features/*"]
     }
   },
-  "include": ["src", "./anaemia.config.ts", "./anaemia.d.ts"],
-  "exclude": ["node_modules", "dist", ".anaemia"]
+  "include": ["./src", "./anaemia.config.ts", "./anaemia.d.ts", "./.anaemia/generated/css-modules/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "./.anaemia/client", "./.anaemia/server"]
 }

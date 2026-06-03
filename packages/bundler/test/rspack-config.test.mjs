@@ -14,6 +14,7 @@ async function createTmpProject(isTs = true) {
     `export default function Index() { return <div>hello</div>; }`,
   );
   fs.writeFileSync(path.join(dir, "index.html"), `<html><body><div anaemia-entry></div></body></html>`);
+  fs.writeFileSync(path.join(dir, "anaemia.config.ts"), `export default {};`);
 
   if (isTs) {
     fs.writeFileSync(path.join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true } }));

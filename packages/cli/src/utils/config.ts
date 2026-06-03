@@ -10,15 +10,25 @@ interface UserConfigModule {
 }
 
 export async function loadUserConfig(appRoot: string): Promise<AnaemiaConfig> {
-  const configPath = path.resolve(appRoot, "anaemia.config.ts");
-  if (!fs.existsSync(configPath)) return {};
+  const candidates = ["anaemia.config.ts", "anaemia.config.js", "anaemia.config.mjs", "anaemia.config.cjs"];
+
+  let configPath: string | null = null;
+  for (const candidate of candidates) {
+    const full = path.resolve(appRoot, candidate);
+    if (fs.existsSync(full)) {
+      configPath = full;
+      break;
+    }
+  }
+
+  if (!configPath) return {};
 
   try {
     const jiti = createJiti(import.meta.url);
     const module = (await jiti.import(configPath)) as UserConfigModule;
     return (module.default ?? module) as AnaemiaConfig;
   } catch (err) {
-    logger.error("failed parsing your anaemia.config.ts file:", err);
+    logger.error(`failed parsing your config file:`, err);
     return {};
   }
 }

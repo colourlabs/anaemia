@@ -2,6 +2,35 @@ import type { Configuration } from "@rspack/core";
 import type { PluginItem } from "@babel/core";
 import type { ServerApp } from "./index.js";
 
+export type SSRDocumentAttributeValue = string | boolean | number | null | undefined;
+
+export type SSRDocumentAttributes = Record<string, SSRDocumentAttributeValue>;
+
+export interface SSRDocumentHead {
+  title?: string;
+  meta: SSRDocumentAttributes[];
+  links: SSRDocumentAttributes[];
+  scripts: Array<SSRDocumentAttributes & { children?: string }>;
+  nodes: string[];
+}
+
+export interface SSRDocument {
+  htmlAttrs: SSRDocumentAttributes;
+  head: SSRDocumentHead;
+  bodyAttrs: SSRDocumentAttributes;
+  bodyStart: string[];
+  bodyEnd: string[];
+}
+
+export interface SSRDocumentContext {
+  request: Request;
+  url: URL;
+  pathname: string;
+  params: Record<string, string>;
+  routePattern: string;
+  isDev: boolean;
+}
+
 export interface AnaemiaPlugin {
   /**
    * unique identifier for the plugin.
@@ -27,17 +56,26 @@ export interface AnaemiaPlugin {
   };
 
   /**
-   * hook into the Hono app instance to register additional routes or middleware.
+   * hook into the ServerApp (hono) instance to register additional routes or middleware.
    */
   configureServer?: (app: ServerApp) => void;
 
   /**
+   * configure the structured SSR document for each HTML response.
+   */
+  configureDocument?: (doc: SSRDocument, ctx: SSRDocumentContext) => void | Promise<void>;
+
+  /**
    * inject into the <head> of every page
+   *
+   * @deprecated use configureDocument(doc) and mutate doc.head instead.
    */
   injectHead?: () => string | Promise<string>;
 
   /**
    * inject before </body> of every page
+   *
+   * @deprecated use configureDocument(doc) and append to doc.bodyEnd instead.
    */
   injectBody?: () => string | Promise<string>;
 
@@ -45,6 +83,8 @@ export interface AnaemiaPlugin {
    * inject at the start of <body>, before the app renders.
    * useful for scripts that must run before first paint to avoid flashes,
    * such as theme detection or feature flag bootstrapping.
+   *
+   * @deprecated use configureDocument(doc) and append to doc.bodyStart instead.
    */
   injectBodyStart?: () => string | Promise<string>;
 }
@@ -58,6 +98,7 @@ export interface AnaemiaConfig {
   styles?: {
     sass?: boolean;
     modules?: boolean;
+    typedModules?: boolean | "emit" | "check";
 
     /**
      * customize the generated CSS module class names.

@@ -59,7 +59,9 @@
       "@rspack/binding": "^2.0.5",
       "@rspack/dev-server": "^2.0.2",
       "@anaemia/core": "workspace:*",
-      "@anaemia/cli": "workspace:*"
+      "@anaemia/bundler": "workspace:*",
+      "@anaemia/cli": "workspace:*",
+      "@anaemia/plugin-mdx": "workspace:*"
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher"

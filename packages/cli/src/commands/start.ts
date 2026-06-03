@@ -9,7 +9,7 @@ export function register(cli: CAC) {
     const userConfig = await loadUserConfig(appRoot);
     const targetPort = userConfig.port || 3000;
 
-    spawn("node", [path.resolve(appRoot, "./dist/server/index.js")], {
+    spawn("node", [path.resolve(appRoot, "./.anaemia/server/index.js")], {
       stdio: "inherit",
       env: { ...process.env, NODE_ENV: "production", PORT: String(targetPort) },
     });

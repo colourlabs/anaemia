@@ -57,7 +57,7 @@ export function register(cli: CAC) {
       }
 
       setTimeout(() => {
-        serverProcess = spawn("node", ["--enable-source-maps", path.resolve(appRoot, "./dist/server/index.js")], {
+        serverProcess = spawn("node", ["--enable-source-maps", path.resolve(appRoot, "./.anaemia/server/index.js")], {
           stdio: "inherit",
           env: {
             ...process.env,

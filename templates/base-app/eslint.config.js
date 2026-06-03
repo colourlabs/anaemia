@@ -37,7 +37,10 @@ export default [
           languageOptions: {
             parser: tsParser,
             parserOptions: {
-              project: "./tsconfig.json",
+              projectService: {
+                allowDefaultProject: ["*.ts", "*.tsx"],
+                defaultProject: "./tsconfig.json",
+              },
             },
           },
           plugins: { "@typescript-eslint": tsRules },

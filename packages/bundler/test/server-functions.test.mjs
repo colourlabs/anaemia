@@ -62,7 +62,7 @@ test("client transform preserves explicit server function ids", () => {
 });
 
 test("should guarantee server-side logic never leaks to client assets", async () => {
-  const clientAssetDir = path.resolve(process.cwd(), "dist/client/assets");
+  const clientAssetDir = path.resolve(process.cwd(), ".anaemia/client/assets");
 
   if (!fs.existsSync(clientAssetDir)) return;
 

@@ -6,6 +6,7 @@ import type { AnalyzeAppOptions, AnalyzerResult } from "./types.js";
 
 import { checkUnusedServerFunctions } from "./checks/server-functions.js";
 import { extractRouteMetadata } from "./checks/route-metadata.js";
+import { analyzeCssModules } from "../styles/css-modules.js";
 
 const DEFAULT_ANALYZER_PATTERNS = [
   "anaemia.config.{ts,js,mjs,cjs}",
@@ -25,7 +26,7 @@ export function collectAnalyzerFiles(appRoot: string, include = DEFAULT_ANALYZER
       absolute: true,
       nodir: true,
       posix: true,
-      ignore: ["node_modules/**", "dist/**", ".anaemia/**"],
+      ignore: ["node_modules/**", "dist/**", ".anaemia/**", "src/**/*.module.*.d.ts"],
     }),
   );
 
@@ -46,6 +47,7 @@ export async function analyzeApp(appRoot: string, options: AnalyzeAppOptions = {
   // route metadata for manifest
   const routeFiles = parsedFiles.filter((f) => /src\/routes\//.test(f.filePath));
   const routeMetadata = routeFiles.map(extractRouteMetadata);
+  const cssModuleAnalysis = analyzeCssModules(normalizedRoot, parsedFiles);
 
   return {
     appRoot: normalizedRoot,
@@ -54,8 +56,9 @@ export async function analyzeApp(appRoot: string, options: AnalyzeAppOptions = {
       analyzedAt: new Date().toISOString(),
     },
     files: parsedFiles,
-    diagnostics: [...diagnostics, ...unusedServerFnDiagnostics],
+    diagnostics: [...diagnostics, ...unusedServerFnDiagnostics, ...cssModuleAnalysis.diagnostics],
     routeMetadata,
+    cssModules: cssModuleAnalysis.cssModules,
   };
 }
 
@@ -66,5 +69,6 @@ export type {
   AnalyzerDiagnostic,
   AnalyzerFileKind,
   AnalyzerResult,
+  CssModuleInfo,
   ParsedAnalyzerFile,
 } from "./types.js";

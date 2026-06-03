@@ -4,15 +4,21 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode, RedirectStatusCode, StatusCode } from "hono/utils/http-status";
 import { renderToStream } from "solid-js/web";
 import { ssrStorage } from "../context.js";
+import { SSRDocumentProvider } from "../document.js";
 import { LOADER_DATA_KEY } from "../shared/constants.js";
 import { setDevResponseCacheHeaders } from "./assets.js";
 import { runGuards, type GuardFn } from "./guards.js";
-import { createDevNoCacheHeadTags, createHtmlStreamShell, getRouteAssetTags } from "./html.js";
+import {
+  applyFrameworkDocumentDefaults,
+  applyPluginDocumentHooks,
+  createHtmlDocumentShell,
+  createSSRDocumentFromTemplate,
+} from "./html.js";
 import { createHydrationDataScript, createHydrationRuntimeScript } from "./hydration.js";
 import { matchRoute } from "./route-match.js";
 import type { RouteManifest, RuntimeEnv } from "./types.js";
 import type { ManifestSnapshot } from "./manifest.js";
-import type { AnaemiaPlugin } from "../../config.js";
+import type { AnaemiaPlugin, SSRDocument } from "../../config.js";
 
 const staticCache = new Map<string, string>();
 
@@ -31,10 +37,12 @@ type RenderRequestOptions = {
 
 type SolidStream = ReturnType<typeof renderToStream>;
 
-function renderApp(App: Component, url: string): SolidStream {
+function renderApp(App: Component, url: string, document: SSRDocument): SolidStream {
   return renderToStream(() => (
     <Router url={url}>
-      <App />
+      <SSRDocumentProvider document={document}>
+        <App />
+      </SSRDocumentProvider>
     </Router>
   ));
 }
@@ -46,6 +54,7 @@ async function render500(args: {
   manifest: RouteManifest;
   serverLoaderRegistry: Map<string, ServerLoader>;
   store: Map<string, unknown>;
+  document: SSRDocument;
 }): Promise<SolidStream | string> {
   const error500Pattern = args.manifest.errors?.["500"];
   if (!error500Pattern) {
@@ -60,7 +69,7 @@ async function render500(args: {
     args.store.set(LOADER_DATA_KEY, { message, stack: args.env.isDev ? stack : undefined });
 
     try {
-      return await ssrStorage.run(args.store, async () => renderApp(args.App, error500Pattern));
+      return await ssrStorage.run(args.store, async () => renderApp(args.App, error500Pattern, args.document));
     } catch {
       return `<h1>500 Internal Server Error</h1>`;
     }
@@ -147,7 +156,39 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     const loaderArgs = { params, request: c.req.raw };
 
     const store = ssrStorage.getStore() || new Map<string, unknown>();
+    const ssrDocument = createSSRDocumentFromTemplate(template);
     let renderStream: SolidStream | string;
+    let documentConfigured = false;
+    const plugins = options.plugins ?? [];
+    const url = new URL(c.req.url);
+
+    const configureDocument = async () => {
+      if (documentConfigured) return;
+
+      applyFrameworkDocumentDefaults({
+        doc: ssrDocument,
+        manifest,
+        activeChunk,
+        isDev: options.env.isDev,
+        hydrationRuntimeScript: createHydrationRuntimeScript(),
+        hydrationDataScript: createHydrationDataScript(store),
+      });
+
+      await applyPluginDocumentHooks({
+        doc: ssrDocument,
+        plugins,
+        ctx: {
+          request: c.req.raw,
+          url,
+          pathname: reqPath,
+          params,
+          routePattern: targetPattern,
+          isDev: options.env.isDev,
+        },
+      });
+
+      documentConfigured = true;
+    };
 
     const isStaticRoute = !options.env.isDev && staticRoutes.has(targetPattern);
 
@@ -191,11 +232,13 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
         }
 
         await options.preloadActiveClientRoute(reqPath);
-        return renderApp(options.App, reqPath);
+        await configureDocument();
+        return renderApp(options.App, reqPath, ssrDocument);
       });
     } catch (err) {
       statusCode = 500;
       console.error("[anaemia framework] runtime execution crash handled:", err);
+      await configureDocument();
       renderStream = await render500({
         App: options.App,
         error: err,
@@ -203,28 +246,11 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
         manifest,
         serverLoaderRegistry: options.serverLoaderRegistry,
         store,
+        document: ssrDocument,
       });
     }
 
-    const routeAssetTags = getRouteAssetTags(manifest, activeChunk);
-
-    const plugins = options.plugins ?? [];
-
-    // resolve all injections before streaming starts
-    const [pluginHeadInjections, pluginBodyStartInjections, pluginBodyInjections] = await Promise.all([
-      Promise.all(plugins.flatMap((p) => p.injectHead?.() ?? [])).then((r) => r.join("")),
-      Promise.all(plugins.flatMap((p) => p.injectBodyStart?.() ?? [])).then((r) => r.join("")),
-      Promise.all(plugins.flatMap((p) => p.injectBody?.() ?? [])).then((r) => r.join("")),
-    ]);
-
-    const headInjections = `${createDevNoCacheHeadTags(options.env.isDev)}${routeAssetTags.styles}${createHydrationRuntimeScript()}${pluginHeadInjections}`;
-
-    const shell = createHtmlStreamShell({
-      template,
-      headInjections,
-      bodyStartInjections: pluginBodyStartInjections,
-      bodyInjections: "", // body injections are handled in afterEntry to ensure they are flushed after the app content for better performance
-    });
+    const shell = createHtmlDocumentShell(ssrDocument);
 
     setDevResponseCacheHeaders(c, options.env);
     c.status(statusCode);
@@ -234,12 +260,7 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
       createHtmlResponseStream({
         beforeEntry: shell.beforeEntry,
         renderStream,
-        afterEntry: () => {
-          const bodyInjections = `${createHydrationDataScript(store)}${routeAssetTags.scripts}${pluginBodyInjections}`;
-          return shell.afterEntry.includes("</body>")
-            ? shell.afterEntry.replace("</body>", `${bodyInjections}</body>`)
-            : `${shell.afterEntry}${bodyInjections}`;
-        },
+        afterEntry: () => shell.afterEntry,
         store,
         onComplete: isStaticRoute ? (html) => staticCache.set(reqPath, html) : undefined,
       }),

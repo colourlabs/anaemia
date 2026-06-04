@@ -4,7 +4,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode, RedirectStatusCode, StatusCode } from "hono/utils/http-status";
 import { renderToStream } from "solid-js/web";
 import { ssrStorage } from "../context.js";
-import { SSRDocumentProvider } from "../document.js";
+import { SSRDocumentProvider, setCurrentSSRDocument, releaseSSRDocument } from "../document.js";
 import { LOADER_DATA_KEY } from "../shared/constants.js";
 import { setDevResponseCacheHeaders } from "./assets.js";
 import { runGuards, type GuardFn } from "./guards.js";
@@ -80,10 +80,11 @@ async function render500(args: {
 }
 
 function createHtmlResponseStream(args: {
-  beforeEntry: string;
+  beforeEntry: () => string;
   renderStream: SolidStream | string;
   afterEntry: () => string;
   store: Map<string, unknown>;
+  renderKey: symbol;
   onComplete?: (html: string) => void;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -97,40 +98,41 @@ function createHtmlResponseStream(args: {
         controller.enqueue(encoder.encode(chunk));
       };
 
-      enqueue(args.beforeEntry);
-
       if (typeof args.renderStream === "string") {
+        enqueue(args.beforeEntry());
         enqueue(args.renderStream);
-        const after = args.afterEntry();
-        enqueue(after);
+        enqueue(args.afterEntry());
         args.onComplete?.(collected.join(""));
+        releaseSSRDocument(args.renderKey);
         controller.close();
         return;
       }
 
       const renderStream = args.renderStream;
-      const writable = new WritableStream<string>({
+      const chunks: string[] = [];
+
+      const buffering = new WritableStream<string>({
         write(chunk) {
-          enqueue(chunk);
+          chunks.push(chunk);
         },
         close() {
-          const after = args.afterEntry();
-          enqueue(after);
+          enqueue(args.beforeEntry());
+          for (const chunk of chunks) enqueue(chunk);
+          enqueue(args.afterEntry());
           args.onComplete?.(collected.join(""));
+          releaseSSRDocument(args.renderKey);
           controller.close();
         },
         abort(error) {
+          releaseSSRDocument(args.renderKey);
           controller.error(error);
         },
       });
 
-      void ssrStorage
-        .run(args.store, async () => {
-          await renderStream.pipeTo(writable);
-        })
-        .catch((error) => {
-          controller.error(error);
-        });
+      void (renderStream.pipeTo(buffering) as unknown as Promise<void>).catch((error) => {
+        releaseSSRDocument(args.renderKey);
+        controller.error(error);
+      });
     },
   });
 }
@@ -221,6 +223,8 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
       }
     }
 
+    const renderKey = setCurrentSSRDocument(ssrDocument);
+
     try {
       renderStream = await ssrStorage.run(store, async () => {
         if (targetPattern && loaderRoutes.has(targetPattern)) {
@@ -250,18 +254,23 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
       });
     }
 
-    const shell = createHtmlDocumentShell(ssrDocument);
-
     setDevResponseCacheHeaders(c, options.env);
     c.status(statusCode);
     c.header("Content-Type", "text/html; charset=UTF-8");
 
     return c.body(
       createHtmlResponseStream({
-        beforeEntry: shell.beforeEntry,
+        beforeEntry: () => {
+          const shell = createHtmlDocumentShell(ssrDocument);
+          return shell.beforeEntry;
+        },
         renderStream,
-        afterEntry: () => shell.afterEntry,
+        afterEntry: () => {
+          const shell = createHtmlDocumentShell(ssrDocument);
+          return shell.afterEntry;
+        },
         store,
+        renderKey,
         onComplete: isStaticRoute ? (html) => staticCache.set(reqPath, html) : undefined,
       }),
     );

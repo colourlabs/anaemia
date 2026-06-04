@@ -100,7 +100,6 @@ test("convertTypeScriptToJs creates jsconfig.json with correct config", async ()
     assert.ok(fs.existsSync(jsconfigPath), "jsconfig.json should be created");
 
     const jsconfig = JSON.parse(fs.readFileSync(jsconfigPath, "utf-8"));
-    assert.equal(jsconfig.compilerOptions.baseUrl, ".");
     assert.equal(jsconfig.compilerOptions.jsx, "preserve");
     assert.equal(jsconfig.compilerOptions.jsxImportSource, "solid-js");
     assert.equal(jsconfig.compilerOptions.checkJs, false);

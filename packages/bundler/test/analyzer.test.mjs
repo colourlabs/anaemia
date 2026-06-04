@@ -408,16 +408,13 @@ test("css modules: records classes and usage metadata", async () => {
       .unused { color: blue; }
       `,
     );
-
     const result = await analyzeApp(dir, { mode: "test" });
-    const cssModule = result.cssModules.find((moduleInfo) => moduleInfo.relativePath === "src/routes/home.module.scss");
-
+    const cssModule = result.cssModules.find((m) => m.relativePath === "src/routes/home.module.scss");
     assert.ok(cssModule);
     assert.deepEqual(cssModule.classes, ["hero", "unused"]);
     assert.deepEqual(cssModule.usedClasses, ["hero", "missing"]);
     assert.deepEqual(cssModule.unusedClasses, ["unused"]);
     assert.deepEqual(cssModule.importers, ["src/routes/index.tsx"]);
-
     assert.equal(result.diagnostics.filter((d) => d.code === "CSS_MODULE_UNKNOWN_CLASS").length, 1);
     assert.equal(result.diagnostics.filter((d) => d.code === "CSS_MODULE_UNUSED_CLASS").length, 1);
   } finally {
@@ -425,24 +422,56 @@ test("css modules: records classes and usage metadata", async () => {
   }
 });
 
-test("css modules: emits and checks declaration files", async () => {
+test("css modules: emits declaration files to .anaemia/generated/css-modules", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-css-module-types-test-"));
   try {
     fs.mkdirSync(path.join(dir, "src/components"), { recursive: true });
     const cssPath = path.join(dir, "src/components/Card.module.css");
-    const dtsPath = `${cssPath}.d.ts`;
+    const dtsPath = path.join(dir, ".anaemia/generated/css-modules/src/components/Card.module.css.d.ts");
     fs.writeFileSync(cssPath, `.root { color: red; } .title-text { color: blue; }`);
 
     assert.deepEqual(syncCssModuleTypes(dir, "emit"), []);
+
     const declaration = fs.readFileSync(dtsPath, "utf-8");
     assert.match(declaration, /readonly "root": string;/);
     assert.match(declaration, /readonly "title-text": string;/);
     assert.match(declaration, /export const root: string;/);
+    assert.doesNotMatch(declaration, /export const title-text/);
 
     fs.writeFileSync(dtsPath, "stale");
     const diagnostics = syncCssModuleTypes(dir, "check");
     assert.equal(diagnostics.length, 1);
     assert.equal(diagnostics[0].code, "CSS_MODULE_TYPES_STALE");
+    assert.match(
+      diagnostics[0].filePath,
+      /\.anaemia\/generated\/css-modules\/src\/components\/Card\.module\.css\.d\.ts/,
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("css modules: check mode passes when declarations are up to date", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-css-module-check-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/components"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src/components/Button.module.css"), `.btn { color: red; }`);
+    syncCssModuleTypes(dir, "emit");
+    const diagnostics = syncCssModuleTypes(dir, "check");
+    assert.equal(diagnostics.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("css modules: mode=false and mode=undefined return empty diagnostics", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-css-module-noop-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src/Foo.module.css"), `.foo { color: red; }`);
+    assert.deepEqual(syncCssModuleTypes(dir, false), []);
+    assert.deepEqual(syncCssModuleTypes(dir, undefined), []);
+    assert.equal(fs.existsSync(path.join(dir, ".anaemia")), false);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

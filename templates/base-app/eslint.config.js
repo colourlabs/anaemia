@@ -38,7 +38,7 @@ export default [
             parser: tsParser,
             parserOptions: {
               projectService: {
-                allowDefaultProject: ["*.ts", "*.tsx"],
+                allowDefaultProject: ["*.config.ts"],
                 defaultProject: "./tsconfig.json",
               },
             },

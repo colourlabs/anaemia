@@ -4,7 +4,7 @@ import type { AstNode } from "../ast-walker.js";
 import type { AnalyzerDiagnostic, ParsedAnalyzerFile } from "../types.js";
 import path from "node:path";
 
-const ALIAS_PREFIXES = ["~", "@core", "@shared", "@features", "@routes"];
+const ALIAS_PREFIXES = ["~", "@shared", "@features", "@routes", "@entities", "@app"];
 const RELATIVE_ESCAPE = /\.\.[/\\]/;
 
 function startLine(node: AstNode): number | undefined {
@@ -21,23 +21,24 @@ function getImportSource(node: AstNode): string | null {
 function suggestAlias(value: string, fromFile: string): string | null {
   const segments: [string, string][] = [
     ["src/features/", "@features/"],
-    ["src/core/", "@core/"],
+    ["src/app/", "@app/"],
     ["src/shared/", "@shared/"],
     ["src/routes/", "@routes/"],
+    ["src/entities/", "@entities/"],
     ["src/", "~/"],
   ];
 
-  // resolve the import relative to the file so we get the full path
-  const resolved = path.resolve(path.dirname(fromFile), value);
+  const resolved = path.resolve(path.dirname(fromFile), value).replace(/\\/g, "/");
 
   for (const [segment, alias] of segments) {
-    const normalized = resolved.replace(/\\/g, "/");
-    const idx = normalized.indexOf(segment);
+    const needle = `/${segment}`;
+    const idx = resolved.lastIndexOf(needle);
     if (idx !== -1) {
-      const rest = normalized.slice(idx + segment.length);
+      const rest = resolved.slice(idx + needle.length);
       return `${alias}${rest}`.replace(/\/+/g, "/");
     }
   }
+
   return null;
 }
 

@@ -58,9 +58,11 @@ export function convertTypeScriptToJs(dir: string, isRoot: boolean = true): void
         rootDirs: [".", "./.anaemia/generated/css-modules"],
         paths: {
           "~/*": ["./src/*"],
-          "@core/*": ["./src/core/*"],
+          "@app/*": ["./src/app/*"],
           "@shared/*": ["./src/shared/*"],
           "@features/*": ["./src/features/*"],
+          "@entities/*": ["./src/entities/*"],
+          "@routes/*": ["./src/routes/*"],
         },
       },
       include: ["src", "./anaemia.config.js", "./anaemia.d.ts", "./.anaemia/generated/css-modules/**/*.d.ts"],
@@ -68,5 +70,13 @@ export function convertTypeScriptToJs(dir: string, isRoot: boolean = true): void
     };
 
     fs.writeFileSync(jsconfigPath, JSON.stringify(jsconfig, null, 2) + "\n", "utf8");
+
+    const eslintConfigPath = path.join(dir, "eslint.config.js");
+
+    if (fs.existsSync(eslintConfigPath)) {
+      const content = fs.readFileSync(eslintConfigPath, "utf8");
+      const updated = content.replace(/anaemia\(\{[^}]*typescript:\s*true[^}]*\}\)/, `anaemia({ typescript: false })`);
+      fs.writeFileSync(eslintConfigPath, updated, "utf8");
+    }
   }
 }

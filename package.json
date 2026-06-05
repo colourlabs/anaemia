@@ -14,7 +14,7 @@
   "scripts": {
     "build": "pnpm --filter @anaemia/* --filter !@anaemia/template-base build",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm -r --if-present test && pnpm -r --if-present test:integration",
+    "test": "NODE_OPTIONS='--test-reporter=spec' pnpm -r --if-present test && pnpm -r --if-present test:integration",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "clean": "pnpm -r exec rm -rf dist .rspack node_modules",
@@ -61,7 +61,8 @@
       "@anaemia/core": "workspace:*",
       "@anaemia/bundler": "workspace:*",
       "@anaemia/cli": "workspace:*",
-      "@anaemia/plugin-mdx": "workspace:*"
+      "@anaemia/plugin-mdx": "workspace:*",
+      "@anaemia/eslint-plugin": "workspace:*"
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher"

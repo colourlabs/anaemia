@@ -57,7 +57,7 @@ function createTmpProject() {
   fs.writeFileSync(
     path.join(dir, "src/features/auth/components/Login.tsx"),
     `
-    import { authService } from "../../../core/services/auth";
+    import { authService } from "../../../app/services/auth";
     export function Login() { return <form action={import.meta.env.AUTH_URL} />; }
     `,
   );
@@ -85,7 +85,7 @@ function createTmpProject() {
   fs.writeFileSync(
     path.join(dir, "src/shared/utils/format.ts"),
     `
-    import { something } from "@core/services/auth";
+    import { something } from "@app/services/auth";
     export const format = () => {};
     `,
   );
@@ -97,6 +97,34 @@ function createTmpProject() {
     import { styles } from "./styles";
     export function Button() { return <button />; }
     `,
+  );
+
+  fs.mkdirSync(path.join(dir, "src/entities/user/api"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "src/entities/user/store"), { recursive: true });
+
+  fs.writeFileSync(path.join(dir, "src/entities/user/types.ts"), `export interface User { id: string; name: string; }`);
+
+  fs.writeFileSync(
+    path.join(dir, "src/entities/user/api/getUser.ts"),
+    `import type { User } from "../types.js";
+export const getUser = async (id: string): Promise<User> => {
+  throw new Error("not implemented");
+};`,
+  );
+
+  fs.writeFileSync(
+    path.join(dir, "src/entities/user/store/userStore.ts"),
+    `import { createSignal } from "solid-js";
+import type { User } from "../types.js";
+const [user, setUser] = createSignal<User | null>(null);
+export { user, setUser };`,
+  );
+
+  fs.writeFileSync(
+    path.join(dir, "src/entities/user/index.ts"),
+    `export type { User } from "./types.js";
+export * from "./api/index.js";
+export * from "./store/userStore.js";`,
   );
 
   return dir;
@@ -339,8 +367,8 @@ test("alias check: relative import escaping into aliased dir warns", async () =>
       (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("Login.tsx"),
     );
     assert.equal(warnings.length, 1);
-    assert.ok(warnings[0].message.includes("../../../core/services/auth"));
-    assert.ok(warnings[0].help.includes("@core"));
+    assert.ok(warnings[0].message.includes("../../../app/services/auth"));
+    assert.ok(warnings[0].help.includes("@app"));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -380,7 +408,7 @@ test("alias check: help message suggests correct alias", async () => {
       (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("Login.tsx"),
     );
     assert.ok(warning);
-    assert.ok(warning.help.includes("@core/services/auth"));
+    assert.ok(warning.help.includes("@app/services/auth"));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -549,6 +577,143 @@ test("missing route export: server-route is not checked", async () => {
       (d) => d.code === "MISSING_ROUTE_EXPORT" && d.filePath?.includes("_route.ts"),
     );
     assert.equal(errors.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// entities
+
+test("entity: feature may import from entity", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/entities/user"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "src/features/profile/components"), { recursive: true });
+
+    fs.writeFileSync(path.join(dir, "src/entities/user/index.ts"), `export interface User { id: string; }`);
+
+    fs.writeFileSync(
+      path.join(dir, "src/features/profile/components/Profile.tsx"),
+      `import type { User } from "@entities/user/index.js";
+export function Profile(props: { user: User }) { return <div>{props.user.id}</div>; }`,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const violations = result.diagnostics.filter(
+      (d) => d.code === "LAYER_BOUNDARY_VIOLATION" && d.filePath?.includes("Profile.tsx"),
+    );
+    assert.equal(violations.length, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("entity: entity may not import from feature", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/entities/user"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "src/features/auth"), { recursive: true });
+
+    fs.writeFileSync(path.join(dir, "src/features/auth/index.ts"), `export const authToken = "token";`);
+
+    fs.writeFileSync(
+      path.join(dir, "src/entities/user/index.ts"),
+      `import { authToken } from "@features/auth/index.js";
+export interface User { id: string; }`,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const violations = result.diagnostics.filter(
+      (d) => d.code === "LAYER_BOUNDARY_VIOLATION" && d.filePath?.includes("entities/user"),
+    );
+    assert.equal(violations.length, 1);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("entity: entity may not import from another entity's internals", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/entities/user/api"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "src/entities/order"), { recursive: true });
+
+    fs.writeFileSync(
+      path.join(dir, "src/entities/user/api/getUser.ts"),
+      `export const getUser = async (id: string) => ({ id });`,
+    );
+
+    fs.writeFileSync(
+      path.join(dir, "src/entities/order/index.ts"),
+      `import { getUser } from "@entities/user/api/getUser.js";
+export interface Order { id: string; }`,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const violations = result.diagnostics.filter(
+      (d) => d.code === "LAYER_BOUNDARY_VIOLATION" && d.filePath?.includes("entities/order"),
+    );
+    assert.equal(violations.length, 1);
+    assert.ok(violations[0].message.includes("index.ts"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("entity: alias check warns when escaping entity dir with relative path", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/entities/order/api"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "src/shared/utils"), { recursive: true });
+
+    fs.writeFileSync(path.join(dir, "src/shared/utils/format.ts"), `export const format = (s: string) => s;`);
+
+    fs.writeFileSync(
+      path.join(dir, "src/entities/order/api/getOrder.ts"),
+      `import { format } from "../../../shared/utils/format.js";
+    export const getOrder = async (id: string) => ({ id });`,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const warnings = result.diagnostics.filter(
+      (d) => d.code === "PREFER_ALIAS_IMPORT" && d.filePath?.includes("getOrder.ts"),
+    );
+
+    console.log(
+      "all diagnostics:",
+      result.diagnostics.map((d) => ({ code: d.code, filePath: d.filePath, help: d.help })),
+    );
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].help.includes("@shared"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("entity: store signal is accessible from feature", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-analyzer-test-"));
+  try {
+    fs.mkdirSync(path.join(dir, "src/entities/user/store"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "src/features/profile"), { recursive: true });
+
+    fs.writeFileSync(
+      path.join(dir, "src/entities/user/store/userStore.ts"),
+      `import { createSignal } from "solid-js";
+const [user, setUser] = createSignal(null);
+export { user, setUser };`,
+    );
+
+    fs.writeFileSync(
+      path.join(dir, "src/features/profile/index.ts"),
+      `import { user } from "@entities/user/store/userStore.js";
+export const getProfile = () => user();`,
+    );
+
+    const result = await analyzeApp(dir, { mode: "test" });
+    const violations = result.diagnostics.filter(
+      (d) => d.code === "LAYER_BOUNDARY_VIOLATION" && d.filePath?.includes("features/profile"),
+    );
+    assert.equal(violations.length, 0);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

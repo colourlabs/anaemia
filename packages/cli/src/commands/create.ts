@@ -3,7 +3,7 @@ import logger from "../utils/logger.js";
 import path from "node:path";
 import fs from "node:fs";
 import pc from "picocolors";
-import { generateSharedComponent, scaffoldFeature, scaffoldHook, scaffoldPage } from "../scaffold.js";
+import { generateSharedComponent, scaffoldEntity, scaffoldFeature, scaffoldHook, scaffoldPage } from "../scaffold.js";
 import prompts from "prompts";
 import { fileURLToPath } from "node:url";
 import { fetchTemplate } from "../utils/fetch-template.js";
@@ -16,7 +16,9 @@ export function register(cli: CAC) {
   cli
     .command("create [target]", "initialize an application or generate domain features (e.g., feature:name)")
     .alias("init")
-    .action(async (target) => {
+    .option("--dir <dir>", "output directory for the new project")
+    .option("--template <variant>", "skip prompts: ts or js")
+    .action(async (target, options) => {
       const appRoot = process.cwd();
 
       if (target && target.includes(":")) {
@@ -54,39 +56,48 @@ export function register(cli: CAC) {
           return;
         }
 
+        if (type === "entity") {
+          scaffoldEntity(normalizedName, appRoot);
+          return;
+        }
+
         logger.error(
-          `unknown layout generator type "${type}". Supported variants: "feature:", "component:", "page:", "hook:"`,
+          `unknown layout generator type "${type}". Supported variants: "feature:", "component:", "page:", "hook:", "entity:"`,
         );
         process.exit(1);
       }
 
       logger.compiler("launching Anaemia project initialization wizard...");
 
-      const response = await prompts([
-        {
-          type: target ? null : "text",
-          name: "projectName",
-          message: "Project name:",
-          initial: "anaemia-app",
-        },
-        {
-          type: "select",
-          name: "variant",
-          message: "Select a variant:",
-          choices: [
-            { title: pc.blue("TypeScript (Recommended)"), value: "ts" },
-            { title: pc.yellow("JavaScript"), value: "js" },
-          ],
-          initial: 0,
-        },
-      ]);
+      const variant = options.template || (process.stdout.isTTY ? null : "ts");
+
+      const response = variant
+        ? { variant, projectName: target }
+        : await prompts([
+            {
+              type: target ? null : "text",
+              name: "projectName",
+              message: "Project name:",
+              initial: "anaemia-app",
+            },
+            {
+              type: "select",
+              name: "variant",
+              message: "Select a variant:",
+              choices: [
+                { title: pc.blue("TypeScript (Recommended)"), value: "ts" },
+                { title: pc.yellow("JavaScript"), value: "js" },
+              ],
+              initial: 0,
+            },
+          ]);
 
       if (!response.variant && response.variant !== 0) {
         logger.warn("project creation aborted.");
         process.exit(0);
       }
 
-      const targetDir = target || response.projectName;
+      const targetDir = options.dir || target || response.projectName;
       const targetPath = path.resolve(appRoot, targetDir);
 
       if (fs.existsSync(targetPath)) {

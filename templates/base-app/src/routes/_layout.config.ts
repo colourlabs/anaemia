@@ -1,4 +1,4 @@
-import testGuard from "@core/guards/testGuard.js";
+import testGuard from "@app/guards/testGuard.js";
 
 export const config = {
   guards: [testGuard],

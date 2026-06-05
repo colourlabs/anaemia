@@ -3,6 +3,8 @@ import pc from "picocolors";
 const logger = {
   prefix: pc.bold(pc.red("[anaemia]")),
 
+  dim: pc.dim,
+
   info(msg: string) {
     console.log(`${this.prefix} ${pc.cyan(msg)}`);
   },

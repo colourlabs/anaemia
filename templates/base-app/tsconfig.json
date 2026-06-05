@@ -12,9 +12,11 @@
     "rootDirs": [".", "./.anaemia/generated/css-modules"],
     "paths": {
       "~/*": ["./src/*"],
-      "@core/*": ["./src/core/*"],
-      "@shared/*": ["./src/shared/*"],
-      "@features/*": ["./src/features/*"]
+      "@app/*": ["./src/app/*"],
+      "@features/*": ["./src/features/*"],
+      "@entities/*": ["./src/entities/*"],
+      "@routes/*": ["./src/routes/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["./src", "./anaemia.config.ts", "./anaemia.d.ts", "./.anaemia/generated/css-modules/**/*.d.ts"],

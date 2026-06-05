@@ -1,6 +1,7 @@
 {
   "name": "@anaemia/core",
   "version": "0.6.0",
+  "description": "core package containing runtime and tools for building anaemia applications",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

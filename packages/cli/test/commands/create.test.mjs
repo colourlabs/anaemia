@@ -104,9 +104,12 @@ test("convertTypeScriptToJs creates jsconfig.json with correct config", async ()
     assert.equal(jsconfig.compilerOptions.jsxImportSource, "solid-js");
     assert.equal(jsconfig.compilerOptions.checkJs, false);
     assert.deepEqual(jsconfig.compilerOptions.paths["~/*"], ["./src/*"]);
-    assert.deepEqual(jsconfig.compilerOptions.paths["@core/*"], ["./src/core/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@app/*"], ["./src/app/*"]);
     assert.deepEqual(jsconfig.compilerOptions.paths["@shared/*"], ["./src/shared/*"]);
     assert.deepEqual(jsconfig.compilerOptions.paths["@features/*"], ["./src/features/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@routes/*"], ["./src/routes/*"]);
+    assert.deepEqual(jsconfig.compilerOptions.paths["@entities/*"], ["./src/entities/*"]);
+
     assert.ok(jsconfig.include.includes("./anaemia.d.ts"));
     assert.ok(jsconfig.include.includes("./anaemia.config.js"));
     assert.ok(jsconfig.exclude.includes("node_modules"));

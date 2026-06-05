@@ -1,0 +1,47 @@
+name: Template smoke test (TypeScript)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'templates/**'
+      - 'packages/**'
+  pull_request:
+    paths:
+      - 'templates/**'
+      - 'packages/**'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: scaffold fresh project (TS template)
+        run: |
+          mkdir /tmp/smoke-test
+          node packages/cli/dist/index.js create smoke-app --dir /tmp/smoke-test --template ts
+
+      - name: install project deps
+        working-directory: /tmp/smoke-test
+        run: pnpm install
+
+      - name: build project
+        working-directory: /tmp/smoke-test
+        run: pnpm build
+
+      - name: typecheck project
+        working-directory: /tmp/smoke-test
+        run: pnpm typecheck

@@ -7,6 +7,7 @@ import type { AnalyzerDiagnostic, AnalyzerFileKind, ParsedAnalyzerFile, ParserEr
 import { checkEnvAccess } from "./checks/env-access.js";
 import { checkAliasImports } from "./checks/alias-imports.js";
 import { checkMissingRouteExport } from "./checks/missing-route-export.js";
+import { checkLayerBoundaries } from "./checks/check-layer-boundaries.js";
 
 const DEFAULT_PARSE_OPTIONS: ParserOptions = {
   sourceType: "module",
@@ -92,6 +93,7 @@ export function parseAnalyzerFile(appRoot: string, filePath: string, options: Pa
       ...checkEnvAccess(file),
       ...checkAliasImports(file),
       ...checkMissingRouteExport(file),
+      ...checkLayerBoundaries(file),
     ];
 
     return { ...file, diagnostics };

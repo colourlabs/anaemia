@@ -41,5 +41,8 @@ jobs:
       - name: install playwright
         run: pnpm --filter @anaemia/core exec playwright install --with-deps
 
+      - name: link cli
+        run: pnpm --filter @anaemia/cli exec npm link
+        
       - name: test integration
         run: pnpm test:integration

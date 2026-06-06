@@ -37,3 +37,9 @@ jobs:
 
       - name: test
         run: pnpm test
+
+      - name: install playwright
+        run: pnpm exec playwright install --with-deps
+
+      - name: test integration
+        run: pnpm test:integration

@@ -138,8 +138,11 @@ try {
   console.log("\n=== typechecking ===");
   run("pnpm run typecheck");
 
-  console.log("\n=== testing ===");
+  console.log("\n=== testing (regular) ===");
   run("pnpm run test");
+
+  console.log("\n=== testing (integration) ===");
+  run("pnpm run test:integration");
 
   console.log("\n=== bumping versions ===");
   for (const { abs, name } of snapshots) {

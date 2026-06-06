@@ -2,15 +2,16 @@ packages:
   - "packages/*"
   - "templates/*"
 overrides:
-  '@rspack/core': ^2.0.5
-  '@rspack/binding': ^2.0.5
-  '@rspack/dev-server': ^2.0.2
-  # this is for templates/
-  '@anaemia/core': workspace:*
-  '@anaemia/bundler': workspace:*
-  '@anaemia/cli': workspace:*
-  '@anaemia/plugin-mdx': workspace:*
-  '@anaemia/eslint-plugin': workspace:*
+  "@rspack/core": ^2.0.5
+  "@rspack/binding": ^2.0.5
+  "@rspack/dev-server": ^2.0.2
+
+  # this is for templates/* which depend on @anaemia/core but don't have access to the workspace protocol
+  "@anaemia/core": workspace:*
+  "@anaemia/bundler": workspace:*
+  "@anaemia/cli": workspace:*
+  "@anaemia/plugin-mdx": workspace:*
+  "@anaemia/eslint-plugin": workspace:*
 allowBuilds:
-  '@parcel/watcher': true
+  "@parcel/watcher": true
   simple-git-hooks: true

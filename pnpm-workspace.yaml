@@ -10,8 +10,6 @@ overrides:
   '@anaemia/cli': workspace:*
   '@anaemia/plugin-mdx': workspace:*
   '@anaemia/eslint-plugin': workspace:*
-publicHoistPattern:
-  - '@rspack/*'
 allowBuilds:
   '@parcel/watcher': true
   simple-git-hooks: true

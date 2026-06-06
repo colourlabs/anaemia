@@ -36,7 +36,7 @@ export type RouteManifest = {
   errors?: Record<string, string>;
 };
 
-export type CssModuleInfo = {
+type CssModuleInfo = {
   filePath: string;
   relativePath: string;
   classes: string[];

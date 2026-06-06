@@ -42,7 +42,7 @@ function stripCssComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
-export function extractCssModuleClasses(source: string): string[] {
+function extractCssModuleClasses(source: string): string[] {
   const withoutComments = stripCssComments(source);
   return uniqueSorted([...withoutComments.matchAll(CLASS_NAME_REGEX)].map((match) => match[1]).filter(Boolean));
 }

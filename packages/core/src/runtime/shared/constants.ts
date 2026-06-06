@@ -5,4 +5,3 @@ export const HONO_CONTEXT_KEY = "honoContext";
 export const LOADER_DATA_KEY = "__LOADER_DATA__";
 export const RPC_PATH = "/_rpc";
 export const SERVER_FUNCTION_DATA_KEY = "__SERVER_FUNCTION_DATA__";
-export const SSR_DOCUMENT_KEY = "__SSR_DOCUMENT__";

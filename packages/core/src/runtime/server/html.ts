@@ -132,7 +132,7 @@ function chunkAssetTags(chunk: ChunkAssets | undefined): { scripts: string; styl
   return { scripts, styles };
 }
 
-export function getRouteAssetTags(manifest: RouteManifest, activeChunk: string): { scripts: string; styles: string } {
+function getRouteAssetTags(manifest: RouteManifest, activeChunk: string): { scripts: string; styles: string } {
   const chunkNames = ["client", "framework", "commons", "vendors"];
   if (activeChunk && activeChunk !== "client") chunkNames.push(activeChunk);
 
@@ -220,7 +220,7 @@ export function applyFrameworkDocumentDefaults(args: {
   args.doc.bodyEnd.push(args.hydrationDataScript, routeAssetTags.scripts);
 }
 
-export function serializeHead(doc: SSRDocument): string {
+function serializeHead(doc: SSRDocument): string {
   return [
     doc.head.title ? `<title>${escapeText(doc.head.title)}</title>` : "",
     ...doc.head.meta.map((attrs) => `${serializeTag("meta", attrs)}\n`),

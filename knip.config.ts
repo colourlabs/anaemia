@@ -2,7 +2,7 @@ export default {
   workspaces: {
     "packages/bundler": {
       project: ["src/**/*.ts"],
-      ignore: ["src/router/manifest.ts", "src/router/scan.ts"],
+      ignore: ["src/router/scan.ts"],
     },
     "packages/cli": {
       project: ["src/**/*.ts"],
@@ -13,7 +13,7 @@ export default {
       ignore: ["src/runtime/entry-client.tsx", "src/runtime/entry-server.tsx"],
     },
   },
-  ignore: ["templates/**", "packages/bundler/dist/**"],
-  ignoreUnresolved: ["__anaemia_server_routes__"],
-  ignoreDependencies: ["@rspack/core"],
+  ignore: ["templates/**"],
+  ignoreUnresolved: [],
+  ignoreDependencies: ["@rspack/core", "@typescript-eslint/eslint-plugin", "@typescript-eslint/parser"],
 };

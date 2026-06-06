@@ -1,1 +1,5 @@
 minimumReleaseAgeStrict: false
+
+pnpm:
+  onlyBuiltDependencies:
+    - "@parcel/watcher"

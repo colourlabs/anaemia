@@ -48,7 +48,7 @@
     "pre-commit": "pnpm lint-staged"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,scss,css}": "oxfmt --write",
+    "*.{ts,tsx,js,jsx,json,scss,css,yaml,md}": "oxfmt --write",
     "*.{ts,tsx}": [
       "eslint --fix"
     ]

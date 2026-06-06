@@ -43,6 +43,6 @@ jobs:
 
       - name: link cli
         run: pnpm --filter @anaemia/cli exec npm link
-        
+
       - name: test integration
         run: pnpm test:integration

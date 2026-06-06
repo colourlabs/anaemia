@@ -39,7 +39,7 @@ jobs:
         run: pnpm test
 
       - name: install playwright
-        run: pnpm exec playwright install --with-deps
+        run: pnpm --filter @anaemia/core exec playwright install --with-deps
 
       - name: test integration
         run: pnpm test:integration

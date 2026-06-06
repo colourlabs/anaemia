@@ -85,7 +85,9 @@ function rollback() {
       for (const depField of ["dependencies", "devDependencies", "peerDependencies"]) {
         if (!pkg[depField]) continue;
         for (const { name: depName, version: depVersion } of snapshots) {
-          if (pkg[depField][depName]) pkg[depField][depName] = `^${depVersion}`;
+          if (pkg[depField][depName] && !pkg[depField][depName].startsWith("workspace:")) {
+            pkg[depField][depName] = `^${depVersion}`;
+          }
         }
       }
       writePkg(abs, pkg);
@@ -147,7 +149,7 @@ try {
     for (const depField of ["dependencies", "devDependencies", "peerDependencies"]) {
       if (!pkg[depField]) continue;
       for (const { name: depName } of snapshots) {
-        if (pkg[depField][depName]) {
+        if (pkg[depField][depName] && !pkg[depField][depName].startsWith("workspace:")) {
           pkg[depField][depName] = `^${newVersion}`;
           console.log(`  updated ${name} → ${depField}.${depName} to ^${newVersion}`);
         }

@@ -5,6 +5,7 @@ overrides:
   '@rspack/core': ^2.0.5
   '@rspack/binding': ^2.0.5
   '@rspack/dev-server': ^2.0.2
+  # this is for templates/
   '@anaemia/core': workspace:*
   '@anaemia/bundler': workspace:*
   '@anaemia/cli': workspace:*

@@ -22,7 +22,7 @@
     "@types/node": "^25.9.1"
   },
   "peerDependencies": {
-    "@anaemia/core": "^0.6.0",
+    "@anaemia/core": "workspace:*",
     "@rspack/core": "*",
     "solid-js": "^1.9.13"
   }

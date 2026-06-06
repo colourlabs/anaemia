@@ -1,6 +1,7 @@
 {
   "name": "@anaemia/bundler",
   "version": "0.6.0",
+  "description": "bundler configurations and AST analyzerq",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +20,7 @@
     "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@anaemia/core": "^0.6.0",
+    "@anaemia/core": "workspace:*",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@rspack/core": "^2.0.5",

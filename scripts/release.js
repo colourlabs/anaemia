@@ -152,6 +152,8 @@ try {
         if (pkg[depField][depName] && !pkg[depField][depName].startsWith("workspace:")) {
           pkg[depField][depName] = `^${newVersion}`;
           console.log(`  updated ${name} → ${depField}.${depName} to ^${newVersion}`);
+        } else if (pkg[depField][depName]?.startsWith("workspace:")) {
+          console.log(`  skipped ${name} → ${depField}.${depName} (workspace protocol)`);
         }
       }
     }

@@ -87,6 +87,7 @@ anaemia is managed as a pnpm monorepo workspace:
 - `packages/bundler` - Custom Rspack compiler configurations for server/client & AST code analyzer built with [`oxc-parser`](https://oxc.rs/docs/contribute/parser.html).
 - `packages/cli` - Scaffolding engine and dev/build orchestration binary.
 - `packages/plugin-mdx` - [MDX](https://mdxjs.com/) support plugin for anaemia.
+- `packages/eslint-plugin` - ESLint rules for anaemia projects.
 - `templates/base-app` - The default engineering blueprint used by `anaemia create`.
 
 ## documentation

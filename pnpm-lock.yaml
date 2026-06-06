@@ -12,6 +12,7 @@ overrides:
   '@anaemia/bundler': workspace:*
   '@anaemia/cli': workspace:*
   '@anaemia/plugin-mdx': workspace:*
+  '@anaemia/eslint-plugin': workspace:*
 
 importers:
 
@@ -209,6 +210,15 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.4.0(jiti@2.7.0))
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.60.0
+        version: 8.60.0(@typescript-eslint/parser@8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/parser':
+        specifier: ^8.60.0
+        version: 8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint:
+        specifier: ^10.4.0
+        version: 10.4.0(jiti@2.7.0)
       eslint-plugin-boundaries:
         specifier: ^6.0.2
         version: 6.0.2(@typescript-eslint/parser@8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.0(jiti@2.7.0))
@@ -257,9 +267,9 @@ importers:
       '@anaemia/cli':
         specifier: workspace:*
         version: link:../../packages/cli
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.4.0(jiti@2.7.0))
+      '@anaemia/eslint-plugin':
+        specifier: workspace:*
+        version: link:../../packages/eslint-plugin
       '@types/node':
         specifier: ^22.13.0
         version: 22.19.19
@@ -272,9 +282,6 @@ importers:
       eslint:
         specifier: ^10.4.0
         version: 10.4.0(jiti@2.7.0)
-      globals:
-        specifier: ^17.6.0
-        version: 17.6.0
       typescript:
         specifier: ^5.7.3
         version: 5.9.3

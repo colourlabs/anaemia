@@ -309,11 +309,15 @@ test("applyPluginDocumentHooks: processes multiple plugins in order", async () =
 
   const plugin1 = {
     name: "first",
-    configureDocument: () => { order.push("first"); },
+    configureDocument: () => {
+      order.push("first");
+    },
   };
   const plugin2 = {
     name: "second",
-    configureDocument: () => { order.push("second"); },
+    configureDocument: () => {
+      order.push("second");
+    },
   };
 
   await applyPluginDocumentHooks({ doc, ctx: {}, plugins: [plugin1, plugin2] });

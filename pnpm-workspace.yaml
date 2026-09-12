@@ -15,3 +15,11 @@ overrides:
 allowBuilds:
   "@parcel/watcher": true
   simple-git-hooks: true
+
+pnpm:
+  # pnpm <=11 field (packageManager is pinned to pnpm@11.5.2). required so CI's
+  # `pnpm install --frozen-lockfile` runs these build scripts instead of failing
+  # with "Ignored build scripts" - the template apps use the same key.
+  onlyBuiltDependencies:
+    - "@parcel/watcher"
+    - simple-git-hooks

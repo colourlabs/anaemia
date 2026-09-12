@@ -5,7 +5,7 @@ import type { ContentfulStatusCode, RedirectStatusCode, StatusCode } from "hono/
 import { renderToStream } from "solid-js/web";
 import { ssrStorage } from "../context.js";
 import { SSRDocumentProvider, setCurrentSSRDocument, releaseSSRDocument } from "../document.js";
-import { LOADER_DATA_KEY } from "../shared/constants.js";
+import { LOADER_DATA_KEY, RPC_TOKEN_KEY } from "../shared/constants.js";
 import { setDevResponseCacheHeaders } from "./assets.js";
 import { runGuards, type GuardFn } from "./guards.js";
 import {
@@ -16,6 +16,7 @@ import {
 } from "./html.js";
 import { createHydrationDataScript, createHydrationRuntimeScript } from "./hydration.js";
 import { matchRoute } from "./route-match.js";
+import { createRpcToken } from "./rpc-security.js";
 import type { RouteManifest, RuntimeEnv } from "./types.js";
 import type { ManifestSnapshot } from "./manifest.js";
 import type { AnaemiaPlugin, SSRDocument } from "../../config.js";
@@ -158,6 +159,10 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     const loaderArgs = { params, request: c.req.raw };
 
     const store = ssrStorage.getStore() || new Map<string, unknown>();
+    // per-request CSRF token, embedded into the hydration payload and required
+    // by /_rpc. the store is request-scoped (see app.ts middleware), so this is
+    // safe under concurrent renders.
+    if (!store.has(RPC_TOKEN_KEY)) store.set(RPC_TOKEN_KEY, createRpcToken());
     const ssrDocument = createSSRDocumentFromTemplate(template);
     let renderStream: SolidStream | string;
     let documentConfigured = false;

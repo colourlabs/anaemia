@@ -98,8 +98,24 @@ test("createManifestStore: sorts routes after loading", async () => {
   try {
     const manifest = {
       routes: [
-        { urlPattern: "/users/:id", chunkName: "u", params: ["id"], isStatic: false, hasLoader: false, hasGuard: false, serverFunctionIds: [] },
-        { urlPattern: "/users", chunkName: "us", params: [], isStatic: true, hasLoader: false, hasGuard: false, serverFunctionIds: [] },
+        {
+          urlPattern: "/users/:id",
+          chunkName: "u",
+          params: ["id"],
+          isStatic: false,
+          hasLoader: false,
+          hasGuard: false,
+          serverFunctionIds: [],
+        },
+        {
+          urlPattern: "/users",
+          chunkName: "us",
+          params: [],
+          isStatic: true,
+          hasLoader: false,
+          hasGuard: false,
+          serverFunctionIds: [],
+        },
       ],
       chunks: {},
       errors: {},
@@ -157,7 +173,15 @@ test("createManifestStore: handles missing template file gracefully", async () =
   try {
     const manifest = {
       routes: [
-        { urlPattern: "/", chunkName: "index", params: [], isStatic: true, hasLoader: false, hasGuard: false, serverFunctionIds: [] },
+        {
+          urlPattern: "/",
+          chunkName: "index",
+          params: [],
+          isStatic: true,
+          hasLoader: false,
+          hasGuard: false,
+          serverFunctionIds: [],
+        },
       ],
       chunks: {},
       errors: {},

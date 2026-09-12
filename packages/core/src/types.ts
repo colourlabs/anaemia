@@ -50,3 +50,22 @@ export type ServerFunction<Args extends unknown[], Return> = ((...args: Args) =>
   id?: string;
   urlId?: string;
 };
+
+/**
+ * context passed to a registered per-function RPC authorization policy.
+ * no session concept exists in the framework - applications must resolve the
+ * caller (cookies, headers, tokens) from the request and decide themselves.
+ */
+export type RpcPolicyContext = {
+  request: Request;
+  url: URL;
+};
+
+/**
+ * optional authorization gate attached to a single server-function. when a
+ * policy exists, /_rpc executes the function only if allow() returns true,
+ * after the CSRF-token and origin checks have passed.
+ */
+export type RpcPolicy = {
+  allow: (ctx: RpcPolicyContext) => boolean | Promise<boolean>;
+};

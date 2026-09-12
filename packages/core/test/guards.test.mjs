@@ -97,9 +97,7 @@ test("runGuards: stops at first guard that returns a result", async () => {
 
 test("runGuards: continues through guards that return void", async () => {
   const registry = new Map();
-  registry.set("/", [
-    async () => [() => {}, () => ({ redirect: "/final" })],
-  ]);
+  registry.set("/", [async () => [() => {}, () => ({ redirect: "/final" })]]);
 
   const result = await runGuards(registry, "/", createCtx());
   assert.deepEqual(result, { redirect: "/final" });
@@ -120,10 +118,7 @@ test("runGuards: supports async guards", async () => {
 test("runGuards: supports multiple guard chains", async () => {
   const registry = new Map();
   registry.set("/", [async () => [() => {}]]);
-  registry.set("/", [
-    async () => [() => {}],
-    async () => [() => ({ redirect: "/from-chain-2" })],
-  ]);
+  registry.set("/", [async () => [() => {}], async () => [() => ({ redirect: "/from-chain-2" })]]);
 
   const result = await runGuards(registry, "/", createCtx());
   assert.deepEqual(result, { redirect: "/from-chain-2" });

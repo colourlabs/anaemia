@@ -1,6 +1,7 @@
 import type { Configuration } from "@rspack/core";
 import type { PluginItem } from "@babel/core";
 import type { ServerApp } from "./index.js";
+import type { RpcSecurityOptions } from "./runtime/server/rpc-security.js";
 
 export type SSRDocumentAttributeValue = string | boolean | number | null | undefined;
 
@@ -117,6 +118,11 @@ export interface AnaemiaConfig {
    * list of anaemia plugins to apply to the build and runtime.
    */
   plugins?: AnaemiaPlugin[];
+
+  /**
+   * security knobs for the /_rpc server-function endpoint.
+   */
+  rpc?: RpcSecurityOptions;
 
   /**
    * inject global constants into the client and/or server bundles at build time.

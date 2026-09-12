@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { $$executeClientRpc } from "../dist/runtime/rpc-client.js";
+import { $$executeClientRpc, extractRpcToken, getRpcToken } from "../dist/runtime/rpc-client.js";
 
 test("$$executeClientRpc returns a callable function with correct id", () => {
   const fn = $$executeClientRpc("myFn");
@@ -68,4 +68,18 @@ test("asyncRpcCall returns undefined when no SSR store exists", async () => {
   const fn = $$executeClientRpc("missing");
   const result = await fn("someArg");
   assert.equal(result, undefined);
+});
+
+test("extractRpcToken reads the token out of a hydrated payload", () => {
+  const raw = JSON.stringify({ __RPC_TOKEN__: "abc.def.ghi", __LOADER_DATA__: { x: 1 } });
+  assert.equal(extractRpcToken(raw), "abc.def.ghi");
+});
+
+test("extractRpcToken returns null for malformed or token-less payloads", () => {
+  assert.equal(extractRpcToken("not json"), null);
+  assert.equal(extractRpcToken(JSON.stringify({ __LOADER_DATA__: {} })), null);
+});
+
+test("getRpcToken is a function", () => {
+  assert.equal(typeof getRpcToken, "function");
 });

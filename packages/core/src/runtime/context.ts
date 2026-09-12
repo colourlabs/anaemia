@@ -1,9 +1,21 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { RpcPolicy } from "../types.js";
 import { SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
 
 type AnyFn = (...args: unknown[]) => unknown;
 
 export const serverFunctionsRegistry = new Map<string, AnyFn>();
+
+/**
+ * optional per-function authorization policies consulted by /_rpc before a
+ * server function executes. register via registerRpcPolicy().
+ */
+export const serverFunctionPolicies = new Map<string, RpcPolicy>();
+
+export function registerRpcPolicy(functionId: string, policy: RpcPolicy): void {
+  serverFunctionPolicies.set(functionId, policy);
+}
+
 export const ssrStorage = new AsyncLocalStorage<Map<string, unknown>>();
 (globalThis as unknown as Record<string, unknown>).__ANAEMIA_SERVER_STORAGE__ = ssrStorage;
 

@@ -6,6 +6,7 @@ import { HONO_CONTEXT_KEY } from "../shared/constants.js";
 import { registerAssetRoutes } from "./assets.js";
 import { registerRpcRoute } from "./rpc.js";
 import { createRenderRequestHandler } from "./render-request.jsx";
+import type { RpcSecurityOptions } from "./rpc-security.js";
 import type { RuntimeEnv } from "./types.js";
 import type { GuardFn } from "./guards.js";
 import type { ManifestSnapshot } from "./manifest.js";
@@ -23,6 +24,7 @@ type CreateServerAppOptions = {
   registerServerRoutes: (app: Hono) => void;
   getManifestSnapshot: () => ManifestSnapshot;
   loadManifestAndTemplate: () => Promise<void>;
+  rpc?: RpcSecurityOptions;
 };
 
 export function createServerApp(options: CreateServerAppOptions) {
@@ -37,7 +39,7 @@ export function createServerApp(options: CreateServerAppOptions) {
   });
 
   registerAssetRoutes(app, options.env);
-  registerRpcRoute(app);
+  registerRpcRoute(app, options.rpc);
   options.registerServerRoutes(app);
 
   app.get("*", createRenderRequestHandler(options));

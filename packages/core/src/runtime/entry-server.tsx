@@ -22,6 +22,7 @@ const app = createServerApp({
   App,
   env,
   plugins: userConfig.plugins ?? [],
+  rpc: userConfig.rpc,
   preloadActiveClientRoute,
   serverLoaderRegistry,
   serverGuardRegistry,

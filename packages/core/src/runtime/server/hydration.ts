@@ -1,5 +1,10 @@
 import { generateHydrationScript } from "solid-js/web";
-import { ANAEMIA_DATA_SCRIPT_ID, LOADER_DATA_KEY, SERVER_FUNCTION_DATA_KEY } from "../shared/constants.js";
+import {
+  ANAEMIA_DATA_SCRIPT_ID,
+  LOADER_DATA_KEY,
+  RPC_TOKEN_KEY,
+  SERVER_FUNCTION_DATA_KEY,
+} from "../shared/constants.js";
 
 function serializeJsonForHtml(value: unknown): string {
   return JSON.stringify(value)
@@ -11,10 +16,15 @@ function serializeJsonForHtml(value: unknown): string {
 
 export function createHydrationDataScript(store: Map<string, unknown>): string {
   const rawStorePayload = Object.fromEntries(store);
-  const finalHydrationStatePayload = {
+  const finalHydrationStatePayload: Record<string, unknown> = {
     [LOADER_DATA_KEY]: rawStorePayload[LOADER_DATA_KEY] || {},
     [SERVER_FUNCTION_DATA_KEY]: rawStorePayload[SERVER_FUNCTION_DATA_KEY] || {},
   };
+
+  const rpcToken = rawStorePayload[RPC_TOKEN_KEY];
+  if (typeof rpcToken === "string") {
+    finalHydrationStatePayload[RPC_TOKEN_KEY] = rpcToken;
+  }
 
   return `<script id="${ANAEMIA_DATA_SCRIPT_ID}" type="application/json">${serializeJsonForHtml(
     finalHydrationStatePayload,

@@ -81,9 +81,7 @@ test("matchRoute: matches root path", () => {
 });
 
 test("matchRoute: extracts dynamic params", () => {
-  const routes = createRoutes([
-    { urlPattern: "/users/:id", chunkName: "users-param-id", params: ["id"] },
-  ]);
+  const routes = createRoutes([{ urlPattern: "/users/:id", chunkName: "users-param-id", params: ["id"] }]);
 
   const result = matchRoute({ routes, chunks: {} }, "/users/42");
   assert.equal(result.activeChunk, "users-param-id");
@@ -101,9 +99,7 @@ test("matchRoute: extracts multiple dynamic params", () => {
 });
 
 test("matchRoute: matches catch-all route", () => {
-  const routes = createRoutes([
-    { urlPattern: "/*", chunkName: "catchall", params: ["rest"] },
-  ]);
+  const routes = createRoutes([{ urlPattern: "/*", chunkName: "catchall", params: ["rest"] }]);
 
   const result = matchRoute({ routes, chunks: {} }, "/any/thing/goes/here");
   assert.equal(result.activeChunk, "catchall");
@@ -111,9 +107,7 @@ test("matchRoute: matches catch-all route", () => {
 });
 
 test("matchRoute: returns 404 for unmatched route", () => {
-  const routes = createRoutes([
-    { urlPattern: "/about", chunkName: "about", params: [] },
-  ]);
+  const routes = createRoutes([{ urlPattern: "/about", chunkName: "about", params: [] }]);
 
   const result = matchRoute({ routes, chunks: {} }, "/nonexistent");
   assert.equal(result.activeChunk, "route-404");
@@ -122,11 +116,9 @@ test("matchRoute: returns 404 for unmatched route", () => {
 
 test("matchRoute: returns 404 with error page pattern when available", () => {
   const manifest = {
-    routes: createRoutes([
-      { urlPattern: "/about", chunkName: "about", params: [] },
-    ]),
+    routes: createRoutes([{ urlPattern: "/about", chunkName: "about", params: [] }]),
     chunks: {},
-    errors: { "404": "/not-found" },
+    errors: { 404: "/not-found" },
   };
 
   const result = matchRoute(manifest, "/nonexistent");

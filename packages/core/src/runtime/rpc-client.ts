@@ -1,5 +1,5 @@
 import { isServer } from "solid-js/web";
-import { ANAEMIA_DATA_SCRIPT_ID, RPC_PATH, SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
+import { ANAEMIA_DATA_SCRIPT_ID, RPC_PATH, RPC_TOKEN_KEY, SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
 
 interface CacheMatch {
   matchingKey: string;
@@ -23,15 +23,39 @@ interface AnaemiaGlobal {
 }
 
 let _clientCache: AnaemiaClientCache | null = null;
+let _rpcToken: string | null = null;
+
+function extractRpcToken(raw: string): string | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return typeof parsed[RPC_TOKEN_KEY] === "string" ? (parsed[RPC_TOKEN_KEY] as string) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * pull the per-render RPC token out of a raw __ANAEMIA_DATA__ payload.
+ * exposed for tooling/tests; rpc-client consumes it automatically.
+ */
+export { extractRpcToken };
 
 function ensureCacheInitialized() {
   if (isServer || _clientCache) return;
   const script = document.getElementById(ANAEMIA_DATA_SCRIPT_ID);
   try {
-    _clientCache = JSON.parse(script?.textContent || "{}") as AnaemiaClientCache;
+    const raw = script?.textContent || "{}";
+    _clientCache = JSON.parse(raw) ?? {};
+    _rpcToken = extractRpcToken(raw);
   } catch {
     _clientCache = {};
   }
+}
+
+/** the per-render CSRF token the current page's SSR pass embedded in __ANAEMIA_DATA__. */
+export function getRpcToken(): string | null {
+  ensureCacheInitialized();
+  return _rpcToken;
 }
 
 function findLooseCacheMatch(
@@ -75,9 +99,13 @@ export function $$executeClientRpc(hashId: string) {
       return data;
     }
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getRpcToken();
+    if (token) headers["X-Anaemia-Token"] = token;
+
     const response = await fetch(`${RPC_PATH}?id=${hashId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(args),
     });
     if (!response.ok) throw new Error(`[anaemia] RPC execution failed: ${response.status}`);

@@ -1,9 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { createHydrationDataScript, createHydrationRuntimeScript } = await import(
-  "../dist/runtime/server/hydration.js"
-);
+const { createHydrationDataScript, createHydrationRuntimeScript } = await import("../dist/runtime/server/hydration.js");
 
 // createHydrationDataScript
 
@@ -42,6 +40,14 @@ test("createHydrationDataScript: handles empty store with defaults", () => {
   const html = createHydrationDataScript(store);
   assert.ok(html.includes('"__LOADER_DATA__":{}'));
   assert.ok(html.includes('"__SERVER_FUNCTION_DATA__":{}'));
+  assert.ok(!html.includes('"__RPC_TOKEN__"'));
+});
+
+test("createHydrationDataScript: embeds the RPC token when present", () => {
+  const store = new Map();
+  store.set("__RPC_TOKEN__", "t0k.eN.sig");
+  const html = createHydrationDataScript(store);
+  assert.ok(html.includes('"__RPC_TOKEN__":"t0k.eN.sig"'));
 });
 
 test("createHydrationDataScript: escapes HTML dangerous characters", () => {

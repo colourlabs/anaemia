@@ -13,13 +13,8 @@ overrides:
   "@anaemia/plugin-mdx": workspace:*
   "@anaemia/eslint-plugin": workspace:*
 allowBuilds:
+  # `allowBuilds` (map form) is the pnpm v11+ key for approving dependency build
+  # scripts, read from pnpm-workspace.yaml. Without these, `pnpm install` fails
+  # with "Ignored build scripts: @parcel/watcher, simple-git-hooks".
   "@parcel/watcher": true
   simple-git-hooks: true
-
-pnpm:
-  # pnpm <=11 field (packageManager is pinned to pnpm@11.5.2). required so CI's
-  # `pnpm install --frozen-lockfile` runs these build scripts instead of failing
-  # with "Ignored build scripts" - the template apps use the same key.
-  onlyBuiltDependencies:
-    - "@parcel/watcher"
-    - simple-git-hooks

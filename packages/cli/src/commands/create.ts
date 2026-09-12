@@ -8,6 +8,7 @@ import prompts from "prompts";
 import { fileURLToPath } from "node:url";
 import { fetchTemplate } from "../utils/fetch-template.js";
 import { convertTypeScriptToJs } from "../utils/ts-to-js.js";
+import { ensurePnpmWorkspace } from "../utils/pnpm-workspace.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -178,6 +179,8 @@ export function register(cli: CAC) {
           logger.error("failed rewriting package.json manifest structures:", err);
         }
       }
+
+      ensurePnpmWorkspace(targetPath);
 
       logger.success(`\n🎉 project successfully scaffolded into ${pc.magenta(targetDir)}!`);
       console.log(pc.dim("\nfollow these steps to begin execution:\n"));

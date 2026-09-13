@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
-import { serverFunctionsRegistry, serverFunctionPolicies } from "../context.js";
-import { RPC_PATH } from "../shared/constants.js";
+import { serverFunctionsRegistry, serverFunctionPolicies } from "../../context.js";
+import { RPC_PATH } from "../../constants.js";
 import {
   DEFAULT_MAX_RPC_BODY_BYTES,
   PayloadTooLargeError,
@@ -8,9 +8,10 @@ import {
   verifyOrigin,
   verifyRpcToken,
   type RpcSecurityOptions,
-} from "./rpc-security.js";
+} from "./security.js";
+import { getLogger } from "../logger.js";
 
-export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}) {
+export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}, isDev = false) {
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_RPC_BODY_BYTES;
   const allowedOrigins = options.allowedOrigins ?? [];
 
@@ -75,7 +76,8 @@ export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}) {
       const result = await serverFunctionsRegistry.get(functionId)!(...argumentsArray);
       return c.json(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Internal server error";
+      getLogger().error("rpc execution failed", error);
+      const message = isDev && error instanceof Error ? error.message : "Internal server error";
       return c.json({ error: message }, 500);
     }
   });

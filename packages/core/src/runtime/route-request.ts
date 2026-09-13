@@ -1,7 +1,7 @@
 import { isServer } from "solid-js/web";
 import type { Context } from "hono";
 import { ssrStorage } from "./context.js";
-import { HONO_CONTEXT_KEY } from "./shared/constants.js";
+import { HONO_CONTEXT_KEY } from "./constants.js";
 
 export function createRouteRequest(pathname: string): Request {
   if (isServer) {

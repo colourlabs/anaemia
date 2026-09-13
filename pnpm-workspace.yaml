@@ -2,9 +2,9 @@ packages:
   - "packages/*"
   - "templates/*"
 overrides:
-  "@rspack/core": ^2.0.5
-  "@rspack/binding": ^2.0.5
-  "@rspack/dev-server": ^2.0.2
+  "@rspack/core": ^2.2.3
+  "@rspack/binding": ^2.2.3
+  "@rspack/dev-server": ^2.2.1
 
   # this is for templates/* which depend on @anaemia/core but don't have access to the workspace protocol
   "@anaemia/core": workspace:*

@@ -1,0 +1,11 @@
+{
+  "name": "@anaemia/bench-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "load-test app for anaemia, resolve the monorepo's own dist at build time",
+  "type": "module",
+  "dependencies": {
+    "@solidjs/router": "^0.16.1",
+    "solid-js": "^1.9.13"
+  }
+}

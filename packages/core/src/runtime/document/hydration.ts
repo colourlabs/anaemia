@@ -1,10 +1,5 @@
 import { generateHydrationScript } from "solid-js/web";
-import {
-  ANAEMIA_DATA_SCRIPT_ID,
-  LOADER_DATA_KEY,
-  RPC_TOKEN_KEY,
-  SERVER_FUNCTION_DATA_KEY,
-} from "../shared/constants.js";
+import { ANAEMIA_DATA_SCRIPT_ID, LOADER_DATA_KEY, RPC_TOKEN_KEY, SERVER_FUNCTION_DATA_KEY } from "../constants.js";
 
 function serializeJsonForHtml(value: unknown): string {
   return JSON.stringify(value)
@@ -31,6 +26,9 @@ export function createHydrationDataScript(store: Map<string, unknown>): string {
   )}</script>\n`;
 }
 
+const runtimeScriptCache: { script: string } = { script: "" };
+
 export function createHydrationRuntimeScript(): string {
-  return generateHydrationScript();
+  if (!runtimeScriptCache.script) runtimeScriptCache.script = generateHydrationScript();
+  return runtimeScriptCache.script;
 }

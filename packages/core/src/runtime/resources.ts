@@ -1,6 +1,6 @@
 import { createResource, type ResourceOptions, type ResourceReturn } from "solid-js";
 import { isServer } from "solid-js/web";
-import { SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
+import { SERVER_FUNCTION_DATA_KEY } from "./constants.js";
 
 interface ServerStorage {
   getStore?: () => Map<string, unknown> | undefined;

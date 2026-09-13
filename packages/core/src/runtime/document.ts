@@ -1,6 +1,6 @@
 import { createContext, createRenderEffect, useContext, type JSX } from "solid-js";
 import { isServer } from "solid-js/web";
-import type { SSRDocument } from "../config.js";
+import type { SSRDocument } from "./document/types.js";
 
 const serverDocumentRegistry = new Map<symbol, SSRDocument>();
 let currentRenderKey: symbol | undefined;

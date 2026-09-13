@@ -1,5 +1,5 @@
 import { isServer } from "solid-js/web";
-import { ANAEMIA_DATA_SCRIPT_ID, RPC_PATH, RPC_TOKEN_KEY, SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
+import { ANAEMIA_DATA_SCRIPT_ID, RPC_PATH, RPC_TOKEN_KEY, SERVER_FUNCTION_DATA_KEY } from "./constants.js";
 
 interface CacheMatch {
   matchingKey: string;

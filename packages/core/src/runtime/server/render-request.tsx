@@ -1,11 +1,11 @@
 import { Router } from "@solidjs/router";
 import type { Component } from "solid-js";
 import type { Context } from "hono";
-import type { ContentfulStatusCode, RedirectStatusCode, StatusCode } from "hono/utils/http-status";
+import type { RedirectStatusCode, StatusCode } from "hono/utils/http-status";
 import { renderToStream } from "solid-js/web";
 import { ssrStorage } from "../context.js";
 import { SSRDocumentProvider, setCurrentSSRDocument, releaseSSRDocument } from "../document.js";
-import { LOADER_DATA_KEY, RPC_TOKEN_KEY } from "../shared/constants.js";
+import { LOADER_DATA_KEY, RPC_TOKEN_KEY } from "../constants.js";
 import { setDevResponseCacheHeaders } from "./assets.js";
 import { runGuards, type GuardFn } from "./guards.js";
 import {
@@ -13,15 +13,22 @@ import {
   applyPluginDocumentHooks,
   createHtmlDocumentShell,
   createSSRDocumentFromTemplate,
-} from "./html.js";
-import { createHydrationDataScript, createHydrationRuntimeScript } from "./hydration.js";
+} from "../document/template.js";
+import { createHydrationDataScript, createHydrationRuntimeScript } from "../document/hydration.js";
+import { getLogger } from "./logger.js";
 import { matchRoute } from "./route-match.js";
-import { createRpcToken } from "./rpc-security.js";
+import { createRpcToken } from "./rpc/security.js";
+import { STATIC_CACHE_MAX_AGE_SECONDS, createStaticHtmlCacheForHtml } from "./static-html-cache.js";
 import type { RouteManifest, RuntimeEnv } from "./types.js";
 import type { ManifestSnapshot } from "./manifest.js";
-import type { AnaemiaPlugin, SSRDocument } from "../../config.js";
+import type { AnaemiaPlugin } from "../../config.js";
+import type { SSRDocument } from "../document/types.js";
 
-const staticCache = new Map<string, string>();
+const staticCache = createStaticHtmlCacheForHtml();
+
+// TextEncoder is stateless; a single shared instance avoids one allocation per
+// response stream.
+const textEncoder = new TextEncoder();
 
 type ServerLoader = (args: { params: Record<string, string>; request: Request }) => unknown | Promise<unknown>;
 
@@ -88,21 +95,34 @@ function createHtmlResponseStream(args: {
   renderKey: symbol;
   onComplete?: (html: string) => void;
 }): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
+  const encoder = textEncoder;
   const collected: string[] = [];
   const shouldCollect = Boolean(args.onComplete);
+  const MAX_BUFFER_BYTES = 16_384;
 
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      const enqueue = (chunk: string) => {
+      // buffers body HTML as a string and encodes/enqueues it in large
+      // batches. Solid emits a stream of tiny chunks (often one per row/cell);
+      // encoding each individually bloats the response machinery. the shell is
+      // flushed immediately to keep TTFB low.
+      let buffered = "";
+      const flush = () => {
+        if (!buffered) return;
+        controller.enqueue(encoder.encode(buffered));
+        buffered = "";
+      };
+      const enqueue = (chunk: string, force = false) => {
         if (shouldCollect) collected.push(chunk);
-        controller.enqueue(encoder.encode(chunk));
+        buffered += chunk;
+        if (force || buffered.length >= MAX_BUFFER_BYTES) flush();
       };
 
       if (typeof args.renderStream === "string") {
         enqueue(args.beforeEntry());
         enqueue(args.renderStream);
         enqueue(args.afterEntry());
+        flush();
         args.onComplete?.(collected.join(""));
         releaseSSRDocument(args.renderKey);
         controller.close();
@@ -110,28 +130,39 @@ function createHtmlResponseStream(args: {
       }
 
       const renderStream = args.renderStream;
-      const chunks: string[] = [];
+      let completed = false;
 
-      const buffering = new WritableStream<string>({
-        write(chunk) {
-          chunks.push(chunk);
-        },
-        close() {
-          enqueue(args.beforeEntry());
-          for (const chunk of chunks) enqueue(chunk);
-          enqueue(args.afterEntry());
-          args.onComplete?.(collected.join(""));
-          releaseSSRDocument(args.renderKey);
-          controller.close();
-        },
-        abort(error) {
-          releaseSSRDocument(args.renderKey);
-          controller.error(error);
-        },
-      });
-
-      void (renderStream.pipeTo(buffering) as unknown as Promise<void>).catch((error) => {
+      const finish = () => {
+        if (completed) return;
+        completed = true;
         releaseSSRDocument(args.renderKey);
+      };
+
+      // shell-first streaming: flush the document head immediately, then batch
+      // body chunks as they arrive, and close the document on completion.
+      enqueue(args.beforeEntry(), true);
+
+      void (
+        renderStream.pipeTo(
+          new WritableStream<string>({
+            write(chunk) {
+              enqueue(chunk);
+            },
+            close() {
+              enqueue(args.afterEntry());
+              flush();
+              args.onComplete?.(collected.join(""));
+              finish();
+              controller.close();
+            },
+            abort(error) {
+              finish();
+              controller.error(error);
+            },
+          }),
+        ) as unknown as Promise<void>
+      ).catch((error) => {
+        finish();
         controller.error(error);
       });
     },
@@ -149,6 +180,21 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     }
 
     const reqPath = c.req.path;
+
+    // serve fully-rendered static pages from the HTML cache before touching the
+    // render pipeline. only 200 responses are ever stored (and only when not in
+    // dev), so a hit is authoritative and needs no route matching, document
+    // parsing, or token minting.
+    if (!options.env.isDev) {
+      const cached = staticCache.get(reqPath);
+      if (cached) {
+        c.header("Content-Type", "text/html; charset=UTF-8");
+        c.header("Cache-Control", `public, max-age=${STATIC_CACHE_MAX_AGE_SECONDS}`);
+        c.header("X-Anaemia-Cache", "HIT");
+        return c.html(cached, 200);
+      }
+    }
+
     const {
       activeChunk,
       targetPattern,
@@ -159,9 +205,10 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     const loaderArgs = { params, request: c.req.raw };
 
     const store = ssrStorage.getStore() || new Map<string, unknown>();
-    // per-request CSRF token, embedded into the hydration payload and required
-    // by /_rpc. the store is request-scoped (see app.ts middleware), so this is
-    // safe under concurrent renders.
+    // CSRF token embedded into the hydration payload and required by /_rpc.
+    // the store is request-scoped (see app.ts middleware), so this is safe
+    // under concurrent renders; createRpcToken itself re-uses the last token
+    // for a short window to avoid signing anew on every render.
     if (!store.has(RPC_TOKEN_KEY)) store.set(RPC_TOKEN_KEY, createRpcToken());
     const ssrDocument = createSSRDocumentFromTemplate(template);
     let renderStream: SolidStream | string;
@@ -199,16 +246,6 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
 
     const isStaticRoute = !options.env.isDev && staticRoutes.has(targetPattern);
 
-    // serve from cache before doing any work
-    if (isStaticRoute) {
-      const cached = staticCache.get(reqPath);
-      if (cached) {
-        c.header("Content-Type", "text/html; charset=UTF-8");
-        c.header("X-Anaemia-Cache", "HIT");
-        return c.html(cached, statusCode as ContentfulStatusCode);
-      }
-    }
-
     if (targetPattern && guardRoutes.has(targetPattern)) {
       try {
         const guardResult = await runGuards(options.serverGuardRegistry, targetPattern, {
@@ -223,7 +260,7 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
           if ("status" in guardResult) statusCode = guardResult.status as StatusCode;
         }
       } catch (err) {
-        console.error("[anaemia] guard threw unexpectedly:", err);
+        getLogger().error("guard threw unexpectedly", err);
         return c.text("Internal Server Error", 500);
       }
     }
@@ -246,7 +283,7 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
       });
     } catch (err) {
       statusCode = 500;
-      console.error("[anaemia framework] runtime execution crash handled:", err);
+      getLogger().error("runtime execution crash handled", err);
       await configureDocument();
       renderStream = await render500({
         App: options.App,
@@ -263,6 +300,17 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
     c.status(statusCode);
     c.header("Content-Type", "text/html; charset=UTF-8");
 
+    // explicit caching story for HTML:
+    //   - static 200 pages are publicly cacheable for the static-cache TTL
+    //   - everything else (dynamic pages, 404, 500) must not be cached by
+    //     browsers or shared caches, avoiding heuristic-based surprises.
+    if (!options.env.isDev) {
+      c.header(
+        "Cache-Control",
+        isStaticRoute && statusCode === 200 ? `public, max-age=${STATIC_CACHE_MAX_AGE_SECONDS}` : "no-store",
+      );
+    }
+
     return c.body(
       createHtmlResponseStream({
         beforeEntry: () => {
@@ -276,7 +324,7 @@ export function createRenderRequestHandler(options: RenderRequestOptions) {
         },
         store,
         renderKey,
-        onComplete: isStaticRoute ? (html) => staticCache.set(reqPath, html) : undefined,
+        onComplete: isStaticRoute && statusCode === 200 ? (html) => staticCache.set(reqPath, html) : undefined,
       }),
     );
   };

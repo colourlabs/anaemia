@@ -7,7 +7,7 @@ import {
   applyPluginDocumentHooks,
   createHtmlDocumentShell,
   createSSRDocumentFromTemplate,
-} from "../dist/runtime/server/html.js";
+} from "../dist/runtime/document/template.js";
 import { OverwriteHead, SSRDocumentProvider } from "../dist/runtime/document.js";
 
 const BASE_TEMPLATE = `<!doctype html><html lang="en"><head><title>Base</title><meta name="viewport" content="width=device-width"></head><body class="app"><main anaemia-entry></main></body></html>`;

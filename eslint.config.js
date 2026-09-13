@@ -13,6 +13,7 @@ export default [
       "templates/**",
       ".anaemia/**",
       "**/dist/**",
+      "scripts/bench/app/**",
       "pnpm-lock.yaml",
       "packages/core/src/context.browser.ts",
     ],
@@ -70,7 +71,12 @@ export default [
 
   // node globals for bundler + cli + scripts
   {
-    files: ["packages/bundler/**/*.ts", "packages/cli/**/*.ts", "packages/core/src/plugins/**/*.ts", "scripts/**/*.js"],
+    files: [
+      "packages/bundler/**/*.ts",
+      "packages/cli/**/*.ts",
+      "packages/core/src/plugins/**/*.ts",
+      "scripts/**/*.{js,mjs}",
+    ],
     languageOptions: {
       globals: { ...globals.node },
     },

@@ -9,7 +9,7 @@ const {
   readBodyWithLimit,
   PayloadTooLargeError,
   DEFAULT_MAX_RPC_BODY_BYTES,
-} = await import("../dist/runtime/server/rpc-security.js");
+} = await import("../dist/runtime/server/rpc/security.js");
 
 setRpcSecret("rpc-security-test-secret");
 

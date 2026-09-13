@@ -11,6 +11,10 @@ jspm_packages/
 dist/
 build/
 .rspack/
+.anaemia/
+
+# benchmark artifacts
+scripts/bench/profiles/
 
 .idea/
 .vscode/

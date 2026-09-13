@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { getLogger } from "./logger.js";
 import type { RouteManifest, RuntimeEnv } from "./types.js";
 import { sortRoutes } from "./route-match.js";
 
@@ -24,7 +25,7 @@ export function createManifestStore(env: RuntimeEnv) {
           return response.text();
         });
       } catch (err) {
-        console.error("[anaemia engine sync error - HTML fetch failed]:", err);
+        getLogger().error("engine sync error: HTML fetch failed", err);
         memoizedHtmlTemplate = "";
       }
 
@@ -35,7 +36,7 @@ export function createManifestStore(env: RuntimeEnv) {
           memoizedManifest = { routes: [], chunks: {}, errors: {} };
         }
       } catch (err) {
-        console.error("[anaemia engine sync error - manifest read failed]:", err);
+        getLogger().error("engine sync error: manifest read failed", err);
         memoizedManifest = { routes: [], chunks: {}, errors: {} };
       }
     } else {
@@ -45,7 +46,7 @@ export function createManifestStore(env: RuntimeEnv) {
           memoizedManifest = JSON.parse(fs.readFileSync(env.manifestPath, "utf-8")) as RouteManifest;
         }
       } catch {
-        console.warn("build assets not fully initialized during bootstrapping cycle.");
+        getLogger().warn("build assets not fully initialized during bootstrapping cycle");
       }
     }
 

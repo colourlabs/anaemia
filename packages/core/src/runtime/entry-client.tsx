@@ -1,6 +1,6 @@
 import { hydrate, render } from "solid-js/web";
 import { Router } from "@solidjs/router";
-import { ENTRY_SELECTOR } from "./shared/constants.js";
+import { ENTRY_SELECTOR } from "./constants.js";
 
 // @ts-expect-error - resolved by Rspack
 import App, { preloadActiveClientRoute } from "anaemia-user-app";

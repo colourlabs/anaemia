@@ -2,11 +2,11 @@ import { Hono } from "hono";
 import { compress } from "hono/compress";
 import type { Component } from "solid-js";
 import { ssrStorage } from "../context.js";
-import { HONO_CONTEXT_KEY } from "../shared/constants.js";
+import { HONO_CONTEXT_KEY } from "../constants.js";
 import { registerAssetRoutes } from "./assets.js";
-import { registerRpcRoute } from "./rpc.js";
+import { registerRpcRoute } from "./rpc/route.js";
 import { createRenderRequestHandler } from "./render-request.jsx";
-import type { RpcSecurityOptions } from "./rpc-security.js";
+import type { RpcSecurityOptions } from "./rpc/security.js";
 import type { RuntimeEnv } from "./types.js";
 import type { GuardFn } from "./guards.js";
 import type { ManifestSnapshot } from "./manifest.js";
@@ -39,8 +39,12 @@ export function createServerApp(options: CreateServerAppOptions) {
   });
 
   registerAssetRoutes(app, options.env);
-  registerRpcRoute(app, options.rpc);
+  registerRpcRoute(app, options.rpc, options.env.isDev);
   options.registerServerRoutes(app);
+
+  for (const plugin of options.plugins) {
+    plugin.configureServer?.(app);
+  }
 
   app.get("*", createRenderRequestHandler(options));
 

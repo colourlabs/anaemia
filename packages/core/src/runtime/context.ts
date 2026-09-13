@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { RpcPolicy } from "../types.js";
-import { SERVER_FUNCTION_DATA_KEY } from "./shared/constants.js";
+import { SERVER_FUNCTION_DATA_KEY } from "./constants.js";
 
 type AnyFn = (...args: unknown[]) => unknown;
 

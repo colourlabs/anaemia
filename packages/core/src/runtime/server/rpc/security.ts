@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Context } from "hono";
+import { getLogger } from "../logger.js";
 
 export const DEFAULT_MAX_RPC_BODY_BYTES = 512_000;
 export const DEFAULT_RPC_TOKEN_TTL_SECONDS = 3_600;
@@ -28,8 +29,8 @@ let rpcSecret = process.env.ANAEMIA_RPC_SECRET;
 function secret(): string {
   if (!rpcSecret) {
     rpcSecret = randomBytes(32).toString("hex");
-    console.warn(
-      "[anaemia] ANAEMIA_RPC_SECRET is not set; /_rpc tokens are being signed " +
+    getLogger().warn(
+      "ANAEMIA_RPC_SECRET is not set; /_rpc tokens are being signed " +
         "with an ephemeral per-process secret. Set ANAEMIA_RPC_SECRET in production " +
         "so tokens survive restarts.",
     );
@@ -40,6 +41,11 @@ function secret(): string {
 /** override the signing secret (tests / bootstrap). */
 export function setRpcSecret(value: string): void {
   rpcSecret = value;
+  // Invalidate the token reuse + verification caches so tokens minted/verified
+  // under the previous secret are no longer accepted.
+  reusedToken.value = "";
+  reusedToken.expiresAt = 0;
+  verifiedTokenCache.clear();
 }
 
 type RpcTokenPayload = {
@@ -52,20 +58,61 @@ function sign(body: Buffer): Buffer {
 }
 
 /**
+ * Render path re-uses a minted token for up to this long instead of signing a
+ * new one per rendered page. Page tokens already live for
+ * DEFAULT_RPC_TOKEN_TTL_SECONDS, so re-using one for a short window only
+ * shrinks the blast radius slightly while removing a randomBytes + HMAC from
+ * every render.
+ */
+const TOKEN_REUSE_MILLISECONDS = 60_000;
+
+const reusedToken = { value: "", expiresAt: 0 };
+
+/**
  * Mint a token to embed into the hydration payload of a rendered page.
  * Valid for `ttlSeconds` and verified with a timing-safe HMAC comparison.
+ * Callers passing an explicit `ttlSeconds` always get a fresh token; the
+ * default path re-uses the previous token for TOKEN_REUSE_MILLISECONDS so
+ * render-heavy workloads only sign once per window.
  */
 export function createRpcToken(options: { ttlSeconds?: number } = {}): string {
+  const now = Date.now();
+  if (options.ttlSeconds === undefined && reusedToken.expiresAt > now) {
+    return reusedToken.value;
+  }
   const payload: RpcTokenPayload = {
-    exp: Math.floor(Date.now() / 1000) + (options.ttlSeconds ?? DEFAULT_RPC_TOKEN_TTL_SECONDS),
+    exp: Math.floor(now / 1000) + (options.ttlSeconds ?? DEFAULT_RPC_TOKEN_TTL_SECONDS),
     nonce: randomBytes(16).toString("hex"),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${body}.${sign(Buffer.from(body)).toString("base64url")}`;
+  const value = `${body}.${sign(Buffer.from(body)).toString("base64url")}`;
+  if (options.ttlSeconds === undefined) {
+    reusedToken.value = value;
+    reusedToken.expiresAt = now + TOKEN_REUSE_MILLISECONDS;
+  }
+  return value;
 }
+
+/**
+ * Verified tokens are cached until their embedded expiry so /_rpc does not
+ * re-run the HMAC on every call that reuses the same page token. A valid token
+ * is already accepted until it expires, so caching the result changes nothing
+ * about what an attacker can do; the map is bounded (LRU) and tokens that fail
+ * verification are never stored. The cache is keyed by the current signing
+ * secret too, so rotating ANAEMIA_RPC_SECRET immediately re-verifies (and
+ * thereby revokes) everything from the old secret.
+ */
+const verifiedTokenCache = new Map<string, { exp: number }>();
+const VERIFY_CACHE_MAX_ENTRIES = 1024;
 
 export function verifyRpcToken(token: string | null | undefined): boolean {
   if (!token) return false;
+  const cacheKey = `${secret()}\u0000${token}`;
+  const cached = verifiedTokenCache.get(cacheKey);
+  if (cached) {
+    if (cached.exp >= Math.floor(Date.now() / 1000)) return true;
+    verifiedTokenCache.delete(cacheKey);
+  }
   const [body, sig] = token.split(".");
   if (!body || !sig) return false;
 
@@ -83,6 +130,10 @@ export function verifyRpcToken(token: string | null | undefined): boolean {
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf-8")) as RpcTokenPayload;
     if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) return false;
+    if (verifiedTokenCache.size >= VERIFY_CACHE_MAX_ENTRIES) {
+      verifiedTokenCache.delete(verifiedTokenCache.keys().next().value as string);
+    }
+    verifiedTokenCache.set(cacheKey, { exp: payload.exp });
     return true;
   } catch {
     return false;

@@ -4,7 +4,7 @@ import { useParams, useLocation, type Params } from "@solidjs/router";
 import type { Location } from "@solidjs/router";
 import { ssrStorage } from "./context.js";
 import { createRouteRequest } from "./route-request.js";
-import { ANAEMIA_DATA_SCRIPT_ID, LOADER_DATA_KEY } from "./shared/constants.js";
+import { ANAEMIA_DATA_SCRIPT_ID, LOADER_DATA_KEY } from "./constants.js";
 
 type LoaderArgs<TParams extends Params> = {
   params: TParams;

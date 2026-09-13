@@ -2,16 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const { Hono } = await import("hono");
-const { registerRpcRoute } = await import("../dist/runtime/server/rpc.js");
+const { registerRpcRoute } = await import("../dist/runtime/server/rpc/route.js");
 const { serverFunctionsRegistry, registerRpcPolicy } = await import("../dist/runtime/context.js");
-const { createRpcToken, setRpcSecret } = await import("../dist/runtime/server/rpc-security.js");
+const { createRpcToken, setRpcSecret } = await import("../dist/runtime/server/rpc/security.js");
 
 // deterministic secret so tokens signed in tests verify against the handler.
 setRpcSecret("rpc-server-test-secret");
 
 function createApp(options) {
   const app = new Hono();
-  registerRpcRoute(app, options);
+  registerRpcRoute(app, options?.rpc, options?.isDev);
   return app;
 }
 
@@ -213,7 +213,7 @@ test("RPC: accepts same-origin request with a valid token", async () => {
 
 test("RPC: allows an extra configured origin", async () => {
   serverFunctionsRegistry.set("testFn", () => "ok");
-  const app = createApp({ allowedOrigins: ["https://stage.example"] });
+  const app = createApp({ rpc: { allowedOrigins: ["https://stage.example"] } });
   const res = await request(app, "POST", "/_rpc?id=testFn", {
     headers: authHeaders({ origin: "https://stage.example" }),
     body: JSON.stringify([]),
@@ -294,7 +294,7 @@ test("RPC: executes async function", async () => {
   assert.equal(body, 42);
 });
 
-test("RPC: returns 500 when function throws", async () => {
+test("RPC: returns 500 with generic message in production when function throws", async () => {
   serverFunctionsRegistry.set("throwFn", () => {
     throw new Error("something broke");
   });
@@ -305,7 +305,21 @@ test("RPC: returns 500 when function throws", async () => {
   });
   assert.equal(res.status, 500);
   const body = await res.json();
-  assert.equal(body.error, "something broke");
+  assert.equal(body.error, "Internal server error");
+});
+
+test("RPC: surfaces the message in dev mode when function throws", async () => {
+  serverFunctionsRegistry.set("throwFnDev", () => {
+    throw new Error("the dev detail");
+  });
+  const app = createApp({ isDev: true });
+  const res = await request(app, "POST", "/_rpc?id=throwFnDev", {
+    headers: authHeaders(),
+    body: JSON.stringify([]),
+  });
+  assert.equal(res.status, 500);
+  const body = await res.json();
+  assert.equal(body.error, "the dev detail");
 });
 
 test("RPC: returns 500 with generic message for non-Error throw", async () => {

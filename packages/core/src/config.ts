@@ -1,36 +1,9 @@
 import type { Configuration } from "@rspack/core";
 import type { PluginItem } from "@babel/core";
 import type { ServerApp } from "./index.js";
-import type { RpcSecurityOptions } from "./runtime/server/rpc-security.js";
-
-export type SSRDocumentAttributeValue = string | boolean | number | null | undefined;
-
-export type SSRDocumentAttributes = Record<string, SSRDocumentAttributeValue>;
-
-export interface SSRDocumentHead {
-  title?: string;
-  meta: SSRDocumentAttributes[];
-  links: SSRDocumentAttributes[];
-  scripts: Array<SSRDocumentAttributes & { children?: string }>;
-  nodes: string[];
-}
-
-export interface SSRDocument {
-  htmlAttrs: SSRDocumentAttributes;
-  head: SSRDocumentHead;
-  bodyAttrs: SSRDocumentAttributes;
-  bodyStart: string[];
-  bodyEnd: string[];
-}
-
-export interface SSRDocumentContext {
-  request: Request;
-  url: URL;
-  pathname: string;
-  params: Record<string, string>;
-  routePattern: string;
-  isDev: boolean;
-}
+import type { Logger } from "./runtime/server/logger.js";
+import type { RpcSecurityOptions } from "./runtime/server/rpc/security.js";
+import type { SSRDocument, SSRDocumentContext } from "./runtime/document/types.js";
 
 export interface AnaemiaPlugin {
   /**
@@ -123,6 +96,13 @@ export interface AnaemiaConfig {
    * security knobs for the /_rpc server-function endpoint.
    */
   rpc?: RpcSecurityOptions;
+
+  /**
+   * custom logger for the runtime server. defaults to a console sink; provide
+   * any {@link Logger} built with {@link createLogger} (fans out to multiple
+   * sinks) to redirect or enrich all framework log output.
+   */
+  logger?: Logger;
 
   /**
    * inject global constants into the client and/or server bundles at build time.

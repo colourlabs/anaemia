@@ -6,7 +6,7 @@ const {
   createHtmlDocumentShell,
   applyPluginDocumentHooks,
   applyFrameworkDocumentDefaults,
-} = await import("../dist/runtime/server/html.js");
+} = await import("../dist/runtime/document/template.js");
 
 const BASIC_TEMPLATE = `<!doctype html>
 <html lang="en">

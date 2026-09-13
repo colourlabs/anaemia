@@ -1,6 +1,7 @@
-import { ENTRY_ATTRIBUTE } from "../shared/constants.js";
-import type { ChunkAssets, ChunkCssAsset, RouteManifest } from "./types.js";
-import type { AnaemiaPlugin, SSRDocument, SSRDocumentAttributes, SSRDocumentContext } from "../../config.js";
+import { ENTRY_ATTRIBUTE } from "../constants.js";
+import type { ChunkAssets, ChunkCssAsset, RouteManifest } from "../server/types.js";
+import type { AnaemiaPlugin } from "../../config.js";
+import type { SSRDocument, SSRDocumentAttributes, SSRDocumentContext, SSRDocumentHead } from "./types.js";
 
 const ENTRY_TAG_REGEX = /(<([a-zA-Z0-9-]+)[^>]*anaemia-entry[^>]*>)(.*?)(<\/\2>)/is;
 const HTML_OPEN_REGEX = /<html\b([^>]*)>/i;
@@ -18,6 +19,57 @@ type SSRDocumentInternals = {
 };
 
 const documentInternals = new WeakMap<SSRDocument, SSRDocumentInternals>();
+
+type DocumentSource = {
+  htmlAttrs: SSRDocumentAttributes;
+  head: SSRDocumentHead;
+  bodyAttrs: SSRDocumentAttributes;
+  bodyStart: string[];
+  bodyEnd: string[];
+  internals: SSRDocumentInternals;
+};
+
+// the parsed template is immutable and identical for every render, so it is
+// parsed once and each request gets a shallow clone (fresh arrays) that the
+// framework and plugins can safely mutate.
+const documentSourceCache: { template: string; source: DocumentSource } = {
+  template: "",
+  source: {
+    htmlAttrs: {},
+    head: { title: undefined, meta: [], links: [], scripts: [], nodes: [] },
+    bodyAttrs: {},
+    bodyStart: [],
+    bodyEnd: [],
+    internals: { entryOpen: "", entryClose: "" },
+  },
+};
+
+function getDocumentSource(template: string): DocumentSource {
+  if (documentSourceCache.template !== template) {
+    const head = HEAD_BLOCK_REGEX.exec(template)?.[1] ?? "";
+    const rawHeadNodes = stripManagedHeadTags(head);
+    const bodySlots = extractEntryBodySlots(template);
+    documentSourceCache.template = template;
+    documentSourceCache.source = {
+      htmlAttrs: parseAttributes(HTML_OPEN_REGEX.exec(template)?.[1]),
+      head: {
+        title: TITLE_REGEX.exec(head)?.[1]?.trim(),
+        meta: [...head.matchAll(META_TAG_REGEX)].map((match) => parseAttributes(match[1])),
+        links: [...head.matchAll(LINK_TAG_REGEX)].map((match) => parseAttributes(match[1])),
+        scripts: [...head.matchAll(SCRIPT_TAG_REGEX)].map((match) => ({
+          ...parseAttributes(match[1]),
+          children: match[2],
+        })),
+        nodes: rawHeadNodes ? [rawHeadNodes] : [],
+      },
+      bodyAttrs: parseAttributes(BODY_OPEN_REGEX.exec(template)?.[1]),
+      bodyStart: bodySlots.beforeEntry,
+      bodyEnd: bodySlots.afterEntry,
+      internals: { entryOpen: bodySlots.entryOpen, entryClose: bodySlots.entryClose },
+    };
+  }
+  return documentSourceCache.source;
+}
 
 function normalizeAssetUrl(url: unknown): string {
   if (!url || typeof url !== "string") return "";
@@ -149,31 +201,22 @@ function getRouteAssetTags(manifest: RouteManifest, activeChunk: string): { scri
 }
 
 export function createSSRDocumentFromTemplate(template: string): SSRDocument {
-  const head = HEAD_BLOCK_REGEX.exec(template)?.[1] ?? "";
-  const rawHeadNodes = stripManagedHeadTags(head);
-  const bodySlots = extractEntryBodySlots(template);
-
+  const src = getDocumentSource(template);
   const doc: SSRDocument = {
-    htmlAttrs: parseAttributes(HTML_OPEN_REGEX.exec(template)?.[1]),
+    htmlAttrs: { ...src.htmlAttrs },
     head: {
-      title: TITLE_REGEX.exec(head)?.[1]?.trim(),
-      meta: [...head.matchAll(META_TAG_REGEX)].map((match) => parseAttributes(match[1])),
-      links: [...head.matchAll(LINK_TAG_REGEX)].map((match) => parseAttributes(match[1])),
-      scripts: [...head.matchAll(SCRIPT_TAG_REGEX)].map((match) => ({
-        ...parseAttributes(match[1]),
-        children: match[2],
-      })),
-      nodes: rawHeadNodes ? [rawHeadNodes] : [],
+      title: src.head.title,
+      meta: src.head.meta.map((attrs) => ({ ...attrs })),
+      links: src.head.links.map((attrs) => ({ ...attrs })),
+      scripts: src.head.scripts.map((attrs) => ({ ...attrs })),
+      nodes: [...src.head.nodes],
     },
-    bodyAttrs: parseAttributes(BODY_OPEN_REGEX.exec(template)?.[1]),
-    bodyStart: bodySlots.beforeEntry,
-    bodyEnd: bodySlots.afterEntry,
+    bodyAttrs: { ...src.bodyAttrs },
+    bodyStart: [...src.bodyStart],
+    bodyEnd: [...src.bodyEnd],
   };
 
-  documentInternals.set(doc, {
-    entryOpen: bodySlots.entryOpen,
-    entryClose: bodySlots.entryClose,
-  });
+  documentInternals.set(doc, src.internals);
 
   return doc;
 }

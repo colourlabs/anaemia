@@ -25,6 +25,11 @@
       "import": "./dist/runtime/route-data.js",
       "default": "./dist/runtime/route-data.js"
     },
+    "./logger": {
+      "types": "./dist/runtime/server/logger.d.ts",
+      "import": "./dist/runtime/server/logger.js",
+      "default": "./dist/runtime/server/logger.js"
+    },
     "./plugins": {
       "types": "./dist/plugins/index.d.ts",
       "import": "./dist/plugins/index.js"
@@ -42,9 +47,9 @@
   },
   "dependencies": {
     "@babel/core": "^7.29.7",
-    "@hono/node-server": "^2.0.4",
+    "@hono/node-server": "^2.1.1",
     "@solidjs/router": "^0.16.1",
-    "hono": "^4.12.23"
+    "hono": "^4.13.7"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",

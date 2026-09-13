@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { getLogger } from "../logger.js";
 
 export const DEFAULT_MAX_RPC_BODY_BYTES = 512_000;
-export const DEFAULT_RPC_TOKEN_TTL_SECONDS = 3_600;
+const DEFAULT_RPC_TOKEN_TTL_SECONDS = 3_600;
 
 export type RpcSecurityOptions = {
   /**

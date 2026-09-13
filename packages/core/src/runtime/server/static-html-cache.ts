@@ -40,7 +40,7 @@ export function createStaticHtmlCache(maxAgeMs: number, maxEntries: number) {
   };
 }
 
-export function createStaticHtmlCacheForHtml() {
+export function createStaticHtmlCacheForHtml(): StaticHtmlCache {
   return createStaticHtmlCache(STATIC_CACHE_MAX_AGE_SECONDS * 1000, 100);
 }
 

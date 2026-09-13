@@ -13,7 +13,8 @@ export default {
       ignore: ["src/runtime/entry-client.tsx", "src/runtime/entry-server.tsx"],
     },
   },
-  ignore: ["templates/**"],
+  ignore: ["templates/**", "scripts/bench/**"],
+  ignoreBinaries: ["dev"],
   ignoreUnresolved: [],
   ignoreDependencies: ["@rspack/core", "@typescript-eslint/eslint-plugin", "@typescript-eslint/parser"],
 };

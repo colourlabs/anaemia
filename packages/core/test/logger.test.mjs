@@ -24,10 +24,7 @@ test("createLogger fans each event out to every sink", () => {
 test("createLogger with multiple sinks dispatches to all of them", () => {
   const primary = [];
   const secondary = [];
-  const logger = createLogger([
-    (event) => primary.push(event),
-    (event) => secondary.push(event),
-  ]);
+  const logger = createLogger([(event) => primary.push(event), (event) => secondary.push(event)]);
   logger.info("app started");
 
   assert.equal(primary.length, 1);

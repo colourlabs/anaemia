@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { createHydrationDataScript, createHydrationRuntimeScript } = await import("../dist/runtime/document/hydration.js");
+const { createHydrationDataScript, createHydrationRuntimeScript } =
+  await import("../dist/runtime/document/hydration.js");
 
 // createHydrationDataScript
 

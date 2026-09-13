@@ -89,7 +89,10 @@ async function buildApp() {
   if (!fs.existsSync(cliEntry)) {
     throw new Error("CLI not built - run `pnpm build` in the repo first");
   }
-  await runProcess(process.execPath, [cliEntry, "build"], { cwd: appDir, env: { ...process.env, NODE_ENV: "production" } });
+  await runProcess(process.execPath, [cliEntry, "build"], {
+    cwd: appDir,
+    env: { ...process.env, NODE_ENV: "production" },
+  });
 }
 
 let server;
@@ -221,9 +224,7 @@ async function runNodeLoad(token) {
     p99Ms: +percentile(latencies, 0.99).toFixed(2),
     maxMs: +latencies[latencies.length - 1].toFixed(2),
     errors: totalErrors,
-    byRoute: Object.fromEntries(
-      [...byRoute].map(([url, s]) => [url, { requests: s.requests, errors: s.errors }]),
-    ),
+    byRoute: Object.fromEntries([...byRoute].map(([url, s]) => [url, { requests: s.requests, errors: s.errors }])),
   };
   return summary;
 }
@@ -273,7 +274,9 @@ async function main() {
     if (runner === "node") {
       console.log(`  req/s        ${summary.requestsPerSecond}`);
       console.log(`  mean / p50 / p90 / p95 / p99 / max`);
-      console.log(`  ${summary.meanMs} / ${summary.p50Ms} / ${summary.p90Ms} / ${summary.p95Ms} / ${summary.p99Ms} / ${summary.maxMs} ms`);
+      console.log(
+        `  ${summary.meanMs} / ${summary.p50Ms} / ${summary.p90Ms} / ${summary.p95Ms} / ${summary.p99Ms} / ${summary.maxMs} ms`,
+      );
       console.log(`  errors       ${summary.errors}/${summary.totalRequests}`);
       for (const [url, s] of Object.entries(summary.byRoute)) {
         console.log(`    ${url.padEnd(10)} n=${s.requests} errors=${s.errors}`);

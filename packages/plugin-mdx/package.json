@@ -13,13 +13,16 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test:integration": "pnpm run build && node --test test/integration/*.test.mjs"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1"
+    "@types/babel__core": "^7.20.5",
+    "@types/node": "^25.9.1",
+    "playwright": "^1.60.0"
   },
   "peerDependencies": {
     "@anaemia/core": "workspace:*",

@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import type { AnaemiaPlugin } from "@anaemia/core/config";
 import type { Configuration, RuleSetRule } from "@rspack/core";
+import { solidMdxDynamicPlugin } from "./babel-plugin.js";
 
 const require = createRequire(import.meta.url);
 
@@ -16,7 +17,7 @@ export function mdx(options: AnaemiaMdxOptions = {}): AnaemiaPlugin {
       {
         loader: require.resolve("@mdx-js/loader"),
         options: {
-          jsxImportSource: "solid-js/h",
+          jsxImportSource: "solid-js",
           jsx: true,
           ...options,
         },
@@ -32,7 +33,7 @@ export function mdx(options: AnaemiaMdxOptions = {}): AnaemiaPlugin {
     },
     module: {
       ...config.module,
-      rules: [mdxRule, ...(config.module?.rules ?? [])],
+      rules: [...(config.module?.rules ?? []), mdxRule],
     },
   });
 
@@ -40,5 +41,9 @@ export function mdx(options: AnaemiaMdxOptions = {}): AnaemiaPlugin {
     name: "@anaemia/plugin-mdx",
     clientRspackConfig: addMdxRule,
     serverRspackConfig: addMdxRule,
+    babelPlugins: {
+      client: [solidMdxDynamicPlugin],
+      server: [solidMdxDynamicPlugin],
+    },
   };
 }

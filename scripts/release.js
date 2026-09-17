@@ -167,6 +167,11 @@ try {
 
   syncTemplateVersions();
 
+  console.log("\n=== regenerating template integrity manifest ===");
+  // the manifest must hash the exact template tree that will be tagged, so it
+  // is regenerated after the template's dependency versions are synced.
+  run("pnpm --filter @anaemia/cli build");
+
   console.log("\n=== publishing ===");
   const published = [];
   for (const { abs, name } of snapshots) {
@@ -182,7 +187,9 @@ try {
   }
 
   console.log("\n=== committing release ===");
-  run(`git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")} templates/base-app/package.json`);
+  run(
+    `git add ${PACKAGES.map((p) => path.join(p, "package.json")).join(" ")} templates/base-app/package.json packages/cli/src/generated/template-manifest.ts`,
+  );
   run(`git commit -m "release v${newVersion}"`);
   run(`git tag -a v${newVersion} -m "release v${newVersion}"`);
   run("git push --follow-tags");

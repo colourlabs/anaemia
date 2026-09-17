@@ -9,6 +9,8 @@
     "**/node_modules",
     "**/dist",
     "**/.anaemia",
+    // regenerated on every build by packages/cli/scripts/generate-template-manifest.mjs
+    "packages/cli/src/generated/**",
     // babel-transform-server makes the formatter hang for 250+ seconds due to the AST manipulation being deeply nested.
     "packages/bundler/src/plugins/babel-transform-server.ts"
   ]

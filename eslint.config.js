@@ -74,6 +74,7 @@ export default [
     files: [
       "packages/bundler/**/*.ts",
       "packages/cli/**/*.ts",
+      "packages/cli/scripts/**/*.mjs",
       "packages/core/src/plugins/**/*.ts",
       "scripts/**/*.{js,mjs}",
     ],
@@ -92,7 +93,7 @@ export default [
 
   // allow console in certain files
   {
-    files: ["packages/cli/**/*.ts"],
+    files: ["packages/cli/**/*.ts", "packages/cli/scripts/**/*.mjs"],
     rules: {
       "no-console": "off",
     },

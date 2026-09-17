@@ -119,22 +119,30 @@ export function use${componentName}() {
 
   // index
   const indexContent = isTypeScript
-    ? `import { runOnServer } from "@anaemia/core";
+    ? `import { runOnServer, registerRpcPolicy } from "@anaemia/core";
 import { ${camelName}Query } from "./api/actions.server.js";
 
 export const ${camelName}Action = runOnServer(async (input: unknown) => {
   return await ${camelName}Query(input);
 });
 
+// /_rpc is deny-by-default: the action is callable from the browser only after
+// a policy is registered here. replace allow() with a real authorization check.
+registerRpcPolicy(${camelName}Action.id, { allow: () => true });
+
 export { ${componentName} } from "./components/${componentName}.js";
 export { use${componentName} } from "./hooks/use${componentName}.js";
 `
-    : `import { runOnServer } from "@anaemia/core";
+    : `import { runOnServer, registerRpcPolicy } from "@anaemia/core";
 import { ${camelName}Query } from "./api/actions.server.js";
 
 export const ${camelName}Action = runOnServer(async (input) => {
   return await ${camelName}Query(input);
 });
+
+// /_rpc is deny-by-default: the action is callable from the browser only after
+// a policy is registered here. replace allow() with a real authorization check.
+registerRpcPolicy(${camelName}Action.id, { allow: () => true });
 
 export { ${componentName} } from "./components/${componentName}.js";
 export { use${componentName} } from "./hooks/use${componentName}.js";

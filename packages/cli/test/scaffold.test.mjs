@@ -92,8 +92,9 @@ test("scaffoldFeature generates a complete feature slice in TS mode", () => {
     assert.match(hook, /export function useUserProfile\(\)/);
 
     const index = read(featureDir, "index.ts");
-    assert.match(index, /import \{ runOnServer \} from "@anaemia\/core";/);
+    assert.match(index, /import \{ runOnServer, registerRpcPolicy \} from "@anaemia\/core";/);
     assert.match(index, /export const userProfileAction = runOnServer/);
+    assert.match(index, /registerRpcPolicy\(userProfileAction\.id, \{ allow: \(\) => true \}\)/);
     assert.match(index, /export \{ UserProfile \} from "\.\/components\/UserProfile\.js";/);
     assert.match(index, /export \{ useUserProfile \} from "\.\/hooks\/useUserProfile\.js";/);
   } finally {

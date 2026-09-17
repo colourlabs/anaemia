@@ -93,7 +93,10 @@ export interface AnaemiaConfig {
   plugins?: AnaemiaPlugin[];
 
   /**
-   * security knobs for the /_rpc server-function endpoint.
+   * security knobs for the /_rpc server-function endpoint. /_rpc is
+   * deny-by-default: register a policy with registerRpcPolicy() for each
+   * server function that should be callable from the browser. set
+   * {@link RpcSecurityOptions.requirePolicy} to false to opt out.
    */
   rpc?: RpcSecurityOptions;
 

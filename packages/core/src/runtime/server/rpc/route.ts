@@ -14,6 +14,9 @@ import { getLogger } from "../logger.js";
 export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}, isDev = false) {
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_RPC_BODY_BYTES;
   const allowedOrigins = options.allowedOrigins ?? [];
+  // secure by default: a function is not callable from the browser unless the
+  // application registered an authorization policy for it.
+  const requirePolicy = options.requirePolicy ?? true;
 
   app.post(RPC_PATH, async (c) => {
     const functionId = c.req.query("id");
@@ -58,7 +61,9 @@ export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}, is
       return c.json({ error: "origin not allowed" }, 403);
     }
 
-    // optional per-function authorization policy registered by the application.
+    // per-function authorization. /_rpc is deny-by-default: a function without
+    // a registered policy is never exposed to the browser unless the
+    // application explicitly opted out with rpc.requirePolicy=false.
     const policy = serverFunctionPolicies.get(functionId);
     if (policy) {
       let authorized: boolean;
@@ -70,6 +75,11 @@ export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}, is
       if (!authorized) {
         return c.json({ error: "forbidden" }, 403);
       }
+    } else if (requirePolicy) {
+      warnMissingPolicy(functionId, true);
+      return c.json({ error: "forbidden" }, 403);
+    } else {
+      warnMissingPolicy(functionId, false);
     }
 
     try {
@@ -81,4 +91,23 @@ export function registerRpcRoute(app: Hono, options: RpcSecurityOptions = {}, is
       return c.json({ error: message }, 500);
     }
   });
+}
+
+const MAX_POLICY_WARNINGS = 1024;
+const warnedMissingPolicy = new Set<string>();
+
+/**
+ * warn once per function id when /_rpc is hit for a function without a policy.
+ * bounded so a hostile caller cannot grow the set without limit.
+ */
+function warnMissingPolicy(functionId: string, blocked: boolean): void {
+  if (warnedMissingPolicy.has(functionId) || warnedMissingPolicy.size >= MAX_POLICY_WARNINGS) return;
+  warnedMissingPolicy.add(functionId);
+  getLogger().warn(
+    blocked
+      ? `blocked /_rpc call to "${functionId}": no authorization policy is registered. ` +
+          `call registerRpcPolicy("${functionId}", { allow: ... }) or set rpc.requirePolicy=false in anaemia.config.ts.`
+      : `/_rpc call to "${functionId}" was allowed without an authorization policy because ` +
+          `rpc.requirePolicy=false. register one with registerRpcPolicy().`,
+  );
 }

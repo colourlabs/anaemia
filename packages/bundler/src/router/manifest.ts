@@ -19,11 +19,22 @@ export function writeManifest(
   const manifest = {
     routes: routes.map((route) => {
       const meta = metadataMap.get(route.filePath);
+      // guards declared via `config.guards` in a page/layout `.config.ts` are
+      // resolved during scanRoutes. the analyzer only flags a bare `guard`
+      // export on the page itself, so both sources must be considered.
+      const hasConfigGuard = route.guards.length > 0 || route.layouts.some((layout) => layout.guards.length > 0);
+      const hasGuard = (meta?.hasGuard ?? false) || hasConfigGuard;
+
       return {
-        ...route,
-        isStatic: meta?.isStatic ?? false,
+        urlPattern: route.urlPattern,
+        chunkName: route.chunkName,
+        params: route.params,
+        type: route.type,
+        // guarded routes must never be eligible for the static HTML cache,
+        // otherwise an authenticated render can be served to anonymous users.
+        isStatic: (meta?.isStatic ?? false) && !hasConfigGuard,
         hasLoader: meta?.hasLoader ?? false,
-        hasGuard: meta?.hasGuard ?? false,
+        hasGuard,
         serverFunctionIds: meta?.serverFunctionIds ?? [],
         cssModules: routeCssModules(
           meta?.filePath ?? path.relative(appRoot, route.filePath).replace(/\\/g, "/"),

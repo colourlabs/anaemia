@@ -16,6 +16,16 @@ export type RpcSecurityOptions = {
    * is streamed so chunked-encoding cannot bypass it. defaults to 512000.
    */
   maxBodyBytes?: number;
+  /**
+   * when true (the default), a server function is only callable over /_rpc if a
+   * per-function authorization policy has been registered with
+   * registerRpcPolicy(). functions without a policy are rejected with 403.
+   *
+   * set to false only for backwards compatibility: unprotected functions then
+   * execute for any caller holding a page token, and a warning is logged once
+   * per function id.
+   */
+  requirePolicy?: boolean;
 };
 
 /**

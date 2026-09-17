@@ -1,6 +1,9 @@
-import { runOnServer } from "@anaemia/core";
+import { runOnServer, registerRpcPolicy } from "@anaemia/core";
 
 const echo = runOnServer(async (value: string) => ({ echo: value, when: Date.now() }), "bench-echo");
+
+// /_rpc is deny-by-default; the benchmark harness has no auth by design.
+registerRpcPolicy(echo.id, { allow: () => true });
 
 export default function Rpc() {
   return (

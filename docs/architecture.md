@@ -107,6 +107,34 @@ anaemia allows seamless execution of server-side logic inside client components 
 
 3. network synthesis: the function is rewritten to use `@anaemia/core`'s internal HTTP payload manager (`$$executeClientRpc`). when invoked in the browser, it seamlessly triggers an automated POST request containing the arguments payload targeting the specific function hash.
 
+### server function security
+
+`/_rpc` is **deny-by-default**. a server function is callable from the browser only after the application registers an authorization policy:
+
+```ts
+import { runOnServer, registerRpcPolicy } from "@anaemia/core";
+
+export const chargeCard = runOnServer(async (amount: number) => {
+  // writes to a payment provider
+});
+
+registerRpcPolicy(chargeCard.id, {
+  allow: ({ request }) => hasValidSession(request),
+});
+```
+
+calls to functions without a policy return `403`. a request still must pass the per-render HMAC token, origin + `Sec-Fetch-Site` CSRF checks, and the 512 KB streaming body cap before reaching a policy. to restore the legacy allow-everything behavior, opt out explicitly with `rpc: { requirePolicy: false }` in `anaemia.config.ts`. for public endpoints, rate-limit the route with hono middleware, e.g.:
+
+```ts
+app.use("/_rpc", async (c, next) => {
+  // per-IP fixed-window limiter backed by your cache/db
+  if (!(await isWithinRateLimit(c.req.header("x-forwarded-for") ?? "local"))) {
+    return c.json({ error: "rate limit exceeded" }, 429);
+  }
+  return next();
+});
+```
+
 ---
 
 ### 4. static analysis pipeline

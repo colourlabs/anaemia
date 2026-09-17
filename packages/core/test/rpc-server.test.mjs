@@ -3,13 +3,24 @@ import assert from "node:assert/strict";
 
 const { Hono } = await import("hono");
 const { registerRpcRoute } = await import("../dist/runtime/server/rpc/route.js");
-const { serverFunctionsRegistry, registerRpcPolicy } = await import("../dist/runtime/context.js");
+const { serverFunctionsRegistry, serverFunctionPolicies, registerRpcPolicy } =
+  await import("../dist/runtime/context.js");
 const { createRpcToken, setRpcSecret } = await import("../dist/runtime/server/rpc/security.js");
 
 // deterministic secret so tokens signed in tests verify against the handler.
 setRpcSecret("rpc-server-test-secret");
 
+// opt into the legacy "unprotected functions are callable" mode so the tests
+// below stay focused on routing/token/origin behavior. the deny-by-default mode
+// is exercised by the dedicated tests using createSecureApp().
 function createApp(options) {
+  const app = new Hono();
+  registerRpcRoute(app, { requirePolicy: false, ...options?.rpc }, options?.isDev);
+  return app;
+}
+
+// production default: functions without a registered policy are rejected.
+function createSecureApp(options) {
   const app = new Hono();
   registerRpcRoute(app, options?.rpc, options?.isDev);
   return app;
@@ -37,6 +48,7 @@ async function request(app, method, path, options = {}) {
 // Cleanup after each test
 test.afterEach(() => {
   serverFunctionsRegistry.clear();
+  serverFunctionPolicies.clear();
 });
 
 // basic routing
@@ -266,6 +278,57 @@ test("RPC: a throwing policy is treated as denied", async () => {
     body: JSON.stringify([]),
   });
   assert.equal(res.status, 403);
+});
+
+// deny-by-default behavior
+
+test("RPC: rejects unprotected functions by default", async () => {
+  let ran = false;
+  serverFunctionsRegistry.set("unprotected", () => {
+    ran = true;
+  });
+  const app = createSecureApp();
+  const res = await request(app, "POST", "/_rpc?id=unprotected", {
+    headers: authHeaders(),
+    body: JSON.stringify([]),
+  });
+  assert.equal(res.status, 403);
+  assert.equal(ran, false);
+});
+
+test("RPC: rejects an unprotected function even with a valid token and same-origin request", async () => {
+  serverFunctionsRegistry.set("unprotected", () => "secret");
+  const app = createSecureApp();
+  const res = await request(app, "POST", "/_rpc?id=unprotected", {
+    headers: authHeaders({ origin: "http://localhost" }),
+    body: JSON.stringify([]),
+  });
+  assert.equal(res.status, 403);
+});
+
+test("RPC: a registered policy allows the function in secure mode", async () => {
+  serverFunctionsRegistry.set("allowed", () => "public data");
+  registerRpcPolicy("allowed", { allow: () => true });
+  const app = createSecureApp();
+  const res = await request(app, "POST", "/_rpc?id=allowed", {
+    headers: authHeaders(),
+    body: JSON.stringify([]),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body, "public data");
+});
+
+test("RPC: requirePolicy=false restores legacy unprotected execution", async () => {
+  serverFunctionsRegistry.set("legacy", () => "ok");
+  const app = createApp();
+  const res = await request(app, "POST", "/_rpc?id=legacy", {
+    headers: authHeaders(),
+    body: JSON.stringify([]),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body, "ok");
 });
 
 // function execution

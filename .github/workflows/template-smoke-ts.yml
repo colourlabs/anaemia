@@ -28,10 +28,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
+      - name: pack locally built packages
+        run: |
+          mkdir -p /tmp/anaemia-pkgs
+          for pkg in core bundler cli plugin-mdx eslint-plugin; do
+            pnpm --filter "@anaemia/$pkg" pack --pack-destination /tmp/anaemia-pkgs
+          done
+
       - name: scaffold fresh project (TS template)
         run: |
           mkdir /tmp/smoke-test
           node packages/cli/dist/index.js create smoke-app --dir /tmp/smoke-test --template ts
+
+      - name: point project at locally built packages
+        run: node scripts/setup-smoke-app.mjs --app /tmp/smoke-test --pkgs /tmp/anaemia-pkgs
 
       - name: install project deps
         working-directory: /tmp/smoke-test

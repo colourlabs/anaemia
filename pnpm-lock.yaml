@@ -182,6 +182,9 @@ importers:
       '@solidjs/router':
         specifier: ^0.16.1
         version: 0.16.1(solid-js@1.9.13)
+      '@types/babel__core':
+        specifier: ^7.20.5
+        version: 7.20.5
       hono:
         specifier: ^4.13.7
         version: 4.13.7
@@ -192,9 +195,6 @@ importers:
         specifier: ^1.9.13
         version: 1.9.13
     devDependencies:
-      '@types/babel__core':
-        specifier: ^7.20.5
-        version: 7.20.5
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1

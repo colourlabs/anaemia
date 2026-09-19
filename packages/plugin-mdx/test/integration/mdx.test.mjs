@@ -30,7 +30,13 @@ function createFixture() {
     recursive: true,
     filter: (src) => !["node_modules", ".anaemia", ".rspack", "dist"].includes(path.basename(src)),
   });
-  fs.symlinkSync(path.join(templateDir, "node_modules"), path.join(dir, "node_modules"), "dir");
+  // Private copy: the HMR suite runs `anaemia dev` straight from the shared
+  // template, and other integration suites point fixtures at workspace
+  // packages through the same install; a shared symlink would leak those
+  // rewiring writes back into the template.
+  fs.cpSync(path.join(templateDir, "node_modules"), path.join(dir, "node_modules"), {
+    recursive: true,
+  });
   return dir;
 }
 

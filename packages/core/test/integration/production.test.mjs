@@ -31,7 +31,12 @@ function createFixture() {
     recursive: true,
     filter: (src) => !["node_modules", ".anaemia", ".rspack", "dist"].includes(path.basename(src)),
   });
-  fs.symlinkSync(path.join(templateDir, "node_modules"), path.join(dir, "node_modules"), "dir");
+  // The fixture needs its own node_modules: the HMR suite runs `anaemia dev`
+  // straight from the template, so any rewiring done through a shared symlink
+  // would corrupt the install the HMR test depends on.
+  fs.cpSync(path.join(templateDir, "node_modules"), path.join(dir, "node_modules"), {
+    recursive: true,
+  });
 
   // The template ships its node_modules pre-installed against the last
   // published release, so point every @anaemia/* package at the freshly built

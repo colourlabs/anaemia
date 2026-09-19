@@ -43,8 +43,9 @@ jobs:
       - name: install playwright
         run: pnpm --filter @anaemia/core exec playwright install --with-deps
 
-      - name: link cli
-        run: pnpm --filter @anaemia/cli exec npm link
-
+      # `pnpm test:integration` (root script) rebuilds the workspace first, so
+      # the fixture in production.test.mjs is rewired against freshly built
+      # @anaemia/* packages rather than whatever the template cached on the last
+      # published release.
       - name: test integration
         run: pnpm test:integration

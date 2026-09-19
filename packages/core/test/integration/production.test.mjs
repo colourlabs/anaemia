@@ -23,6 +23,8 @@ async function getFreePort() {
   });
 }
 
+const workspaceRoot = path.resolve(__dirname, "../../../..");
+
 function createFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "anaemia-prod-test-"));
   fs.cpSync(templateDir, dir, {
@@ -30,7 +32,76 @@ function createFixture() {
     filter: (src) => !["node_modules", ".anaemia", ".rspack", "dist"].includes(path.basename(src)),
   });
   fs.symlinkSync(path.join(templateDir, "node_modules"), path.join(dir, "node_modules"), "dir");
+
+  // The template ships its node_modules pre-installed against the last
+  // published release, so point every @anaemia/* package at the freshly built
+  // workspace source. Otherwise the fixture would exercise the old published
+  // CLI/core (no `.config.ts` guard detection, no static-cache guard isolation)
+  // and the assertions below would fail.
+  //
+  // solid-js and @solidjs/router must come from the same copy the workspace
+  // core compiles against: Solid's context implementations are keyed on module
+  // identity, so mixing the template's (newer) install with the workspace
+  // core's router makes the route/context symbols drift, taking every guarded
+  // or loadered page down with "reading 'id' of undefined".
+  rewireAnaemiaLinks(dir);
+  rewireSolidLinks(dir);
   return dir;
+}
+
+function rewireAnaemiaLinks(dir) {
+  for (const name of ["core", "bundler", "cli", "plugin-mdx", "eslint-plugin"]) {
+    const target = path.join(workspaceRoot, "packages", name);
+    const linkPath = path.join(dir, "node_modules/@anaemia", name);
+    try {
+      fs.unlinkSync(linkPath);
+    } catch {
+      // may be absent if the template stops shipping it
+    }
+    fs.symlinkSync(target, linkPath, "dir");
+  }
+}
+
+function rewireSolidLinks(dir) {
+  const workspaceNodeModules = path.join(workspaceRoot, "node_modules", ".pnpm");
+
+  // the workspace core may pin exactly the solid-js version it supports; read
+  // it from the local manifest rather than guessing at a scope range.
+  const corePkg = JSON.parse(fs.readFileSync(path.join(workspaceRoot, "packages/core/package.json"), "utf8"));
+  const solidSpec = corePkg.peerDependencies?.["solid-js"] ?? "^1.9.0";
+  const solidVersion = solidSpec.replace(/[~^]/, "");
+  const solidEscaped = solidVersion.replace(/\./g, "\\.");
+
+  const solidEntry = fs
+    .readdirSync(workspaceNodeModules)
+    .find((entry) => new RegExp(`^solid-js@${solidEscaped}$`).test(entry));
+  const routerEntry = fs
+    .readdirSync(workspaceNodeModules)
+    .find((entry) => new RegExp(`^@solidjs\\+router@[^_]+_solid-js@${solidEscaped}$`).test(entry));
+
+  const links = [];
+  if (solidEntry) {
+    links.push([
+      path.join(dir, "node_modules", "solid-js"),
+      path.join(workspaceNodeModules, solidEntry, "node_modules", "solid-js"),
+    ]);
+  }
+  if (routerEntry) {
+    links.push([
+      path.join(dir, "node_modules", "@solidjs", "router"),
+      path.join(workspaceNodeModules, routerEntry, "node_modules", "@solidjs", "router"),
+    ]);
+  }
+
+  for (const [linkPath, target] of links) {
+    try {
+      fs.unlinkSync(linkPath);
+    } catch {
+      // fine, may be absent
+    }
+    fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+    fs.symlinkSync(target, linkPath, "dir");
+  }
 }
 
 function writeFixtureRoutes(dir) {

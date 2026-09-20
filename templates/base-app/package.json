@@ -10,14 +10,14 @@
     "start": "anaemia start"
   },
   "dependencies": {
-    "@anaemia/core": "^0.8.0",
+    "@anaemia/core": "^0.9.0",
     "@solidjs/router": "^0.16.1",
     "lightningcss": "^1.32.0",
     "solid-js": "^1.9.13"
   },
   "devDependencies": {
-    "@anaemia/cli": "^0.8.0",
-    "@anaemia/eslint-plugin": "^0.8.0",
+    "@anaemia/cli": "^0.9.0",
+    "@anaemia/eslint-plugin": "^0.9.0",
     "@types/node": "^22.13.0",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",

@@ -2,7 +2,7 @@
   "name": "@anaemia/cli",
   "version": "0.8.0",
   "bin": {
-    "anaemia": "./dist/index.js"
+    "anaemia": "./bin/anaemia.mjs"
   },
   "type": "module",
   "scripts": {
